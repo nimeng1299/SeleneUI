@@ -8,10 +8,10 @@ public class Color {
     public int a;
 
     private Color(int r, int g, int b, int a) {
-        this.r = r;
-        this.g = g;
-        this.b = b;
-        this.a = a;
+        this.r = Math.clamp(r, 0, 255);
+        this.g = Math.clamp(g, 0, 255);
+        this.b = Math.clamp(b, 0, 255);
+        this.a = Math.clamp(a, 0, 100);
     }
 
     public int Red() {

@@ -2,6 +2,7 @@ package neuvillette.selene.screen;
 
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import neuvillette.selene.widget.SWidget;
 
 public class SeleneScreen extends Screen {
     public SeleneScreen(Component title) {
@@ -11,6 +12,7 @@ public class SeleneScreen extends Screen {
     @Override
     protected void init() {
         super.init();
+        this.addRenderableWidget(new SWidget(50, 50, 150, 150, Component.literal("Swidget")));
     }
 
     @Override
