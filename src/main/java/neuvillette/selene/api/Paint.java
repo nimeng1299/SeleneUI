@@ -228,6 +228,63 @@ public class Paint {
         ));
     }
 
+    /** 绘制实心圆角矩形，圆角半径限制在 0 到短边的一半之间。 */
+    public static void drawRoundedRectangle(Rect rect, float radius, Color color) {
+        drawRoundedRectangle(new Matrix4f(), rect, radius, color);
+    }
+
+    /** 使用指定的局部变换绘制实心圆角矩形。 */
+    public static void drawRoundedRectangle(Matrix4f pose, Rect rect, float radius, Color color) {
+        drawBorderedRoundedRectangle(pose, rect, radius, color, color, 0f);
+    }
+
+    /**
+     * 绘制带边框的圆角矩形，radius 为外侧圆角半径，边框向内绘制。
+     * 内侧圆角半径为 max(radius - borderWidth, 0)，边框宽度不超过短边的一半。
+     * 填充和边框互不重叠，支持透明填充、半透明边框和小数宽度。
+     */
+    public static void drawBorderedRoundedRectangle(
+            Rect rect, float radius, Color fillColor, Color borderColor, float borderWidth
+    ) {
+        drawBorderedRoundedRectangle(new Matrix4f(), rect, radius, fillColor, borderColor, borderWidth);
+    }
+
+    /** 使用指定的局部变换绘制带边框的圆角矩形。 */
+    public static void drawBorderedRoundedRectangle(
+            Matrix4f pose, Rect rect, float radius, Color fillColor, Color borderColor, float borderWidth
+    ) {
+        Objects.requireNonNull(pose, "pose");
+        Objects.requireNonNull(rect, "rect");
+        Objects.requireNonNull(fillColor, "fillColor");
+        Objects.requireNonNull(borderColor, "borderColor");
+        RenderSystem.assertOnRenderThread();
+        if (!Float.isFinite(radius) || !Float.isFinite(borderWidth)) {
+            throw new IllegalArgumentException("Corner radius and border width must be finite");
+        }
+
+        float left = Math.min(rect.x(), rect.x2());
+        float top = Math.min(rect.y(), rect.y2());
+        float right = Math.max(rect.x(), rect.x2());
+        float bottom = Math.max(rect.y(), rect.y2());
+        if (left == right || top == bottom) {
+            return;
+        }
+
+        float limit = Math.min(right - left, bottom - top) / 2f;
+        float cornerRadius = Math.clamp(radius, 0f, limit);
+        float width = Math.clamp(borderWidth, 0f, limit);
+        if (cornerRadius == 0f) {
+            drawBorderedRectangle(pose, rect, fillColor, borderColor, width);
+            return;
+        }
+
+        int fill = argb(fillColor);
+        int border = argb(borderColor);
+        draw(VertexFormat.Mode.QUADS, buffer -> addRoundedRectangle(
+                buffer, pose, left, top, right, bottom, cornerRadius, width, fill, border
+        ));
+    }
+
     private static int argb(Color color) {
         int alpha = Math.round(Math.clamp(color.Alpha(), 0, 100) * 255f / 100f);
         return (alpha << 24) | (Math.clamp(color.Red(), 0, 255) << 16)
@@ -318,6 +375,68 @@ public class Paint {
         buffer.addVertex(pose, centerX + dx1 * inner1, centerY + dy1 * inner1, 0f).setColor(color);
         buffer.addVertex(pose, centerX + dx2 * inner2, centerY + dy2 * inner2, 0f).setColor(color);
         buffer.addVertex(pose, centerX + dx2 * outer2, centerY + dy2 * outer2, 0f).setColor(color);
+    }
+
+    private record OutlinePoint(float outerX, float outerY, float innerX, float innerY) {}
+
+    private static void addRoundedRectangle(
+            VertexConsumer buffer, Matrix4f pose, float left, float top, float right, float bottom,
+            float radius, float width, int fill, int border
+    ) {
+        float innerRadius = Math.max(radius - width, 0f);
+        float centerX = left + (right - left) / 2f;
+        float centerY = top + (bottom - top) / 2f;
+        int fillColor = left + width < right - width && top + width < bottom - width ? fill : 0;
+        int borderColor = width > 0 ? border : 0;
+        int segments = Math.clamp(
+                (int) Math.ceil(Math.PI / 2 * Math.max(radius, 16f) / 2.0), 1, 1024
+        );
+        OutlinePoint first = null;
+        OutlinePoint previous = null;
+        for (int corner = 0; corner < 4; corner++) {
+            boolean rightCorner = corner < 2;
+            boolean bottomCorner = corner == 1 || corner == 2;
+            float outerCenterX = rightCorner ? right - radius : left + radius;
+            float outerCenterY = bottomCorner ? bottom - radius : top + radius;
+            float innerCenterX = rightCorner ? right - width - innerRadius : left + width + innerRadius;
+            float innerCenterY = bottomCorner ? bottom - width - innerRadius : top + width + innerRadius;
+            for (int i = 0; i <= segments; i++) {
+                double angle = Math.toRadians((corner * 90 + 90.0 * i / segments) % 360.0);
+                float dx = (float) Math.sin(angle);
+                float dy = (float) -Math.cos(angle);
+                OutlinePoint point = new OutlinePoint(
+                        outerCenterX + dx * radius, outerCenterY + dy * radius,
+                        innerCenterX + dx * innerRadius, innerCenterY + dy * innerRadius
+                );
+                if (previous == null) {
+                    first = point;
+                } else {
+                    addRoundedEdge(buffer, pose, previous, point, centerX, centerY, fillColor, borderColor);
+                }
+                previous = point;
+            }
+        }
+        addRoundedEdge(buffer, pose, previous, first, centerX, centerY, fillColor, borderColor);
+    }
+
+    private static void addRoundedEdge(
+            VertexConsumer buffer, Matrix4f pose, OutlinePoint previous, OutlinePoint next,
+            float centerX, float centerY, int fill, int border
+    ) {
+        if ((fill >>> 24) != 0) {
+            // 一个退化为三角形的四边形，填满内轮廓的一片。
+            buffer.addVertex(pose, centerX, centerY, 0f).setColor(fill);
+            buffer.addVertex(pose, next.innerX, next.innerY, 0f).setColor(fill);
+            buffer.addVertex(pose, previous.innerX, previous.innerY, 0f).setColor(fill);
+            buffer.addVertex(pose, centerX, centerY, 0f).setColor(fill);
+        }
+        if ((border >>> 24) != 0) {
+            // 内外轮廓之间的网格与填充共用边界，避免半透明颜色叠加。
+            buffer.addVertex(pose, previous.outerX, previous.outerY, 0f).setColor(border);
+            buffer.addVertex(pose, previous.innerX, previous.innerY, 0f).setColor(border);
+            buffer.addVertex(pose, next.innerX, next.innerY, 0f).setColor(border);
+            buffer.addVertex(pose, next.outerX, next.outerY, 0f).setColor(border);
+        }
     }
 
     private static void draw(VertexFormat.Mode mode, Consumer<BufferBuilder> vertices) {

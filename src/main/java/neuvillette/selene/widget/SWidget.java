@@ -41,19 +41,19 @@ public class SWidget extends AbstractWidget {
 
     @Override
     public void renderWidget(GuiGraphics guiGraphics, int i, int i1, float v) {
+        Rect rect = Rect.from_xywh(200, 100, 50, 40);
         Color fill = Color.fromRGB(40, 160, 255);
         Color border = Color.fromRGB(255, 255, 255);
 
-        Paint.drawBorderedRectangle(
-                Rect.from_xywh(20, 20, 120, 40), fill, border, 2);
+// 圆角半径 10
+        Paint.drawRoundedRectangle(Rect.from_xywh(200, 200, 50, 40), 5, fill);
 
-        Paint.drawBorderedCircle(
-                100, 100, 30, fill, border, 2);
+// 圆角半径 10，边框宽度 2
+        Paint.drawBorderedRoundedRectangle(Rect.from_xywh(100, 200, 50, 40), 5, fill, border, 2);
 
-        Paint.drawBorderedSector(
-                200, 200, 30, 315, 45, fill, border, 2, true);
-        Paint.drawBorderedSector(
-                100, 200, 30, 315, 45, fill, border, 2, false);
+        // 圆角半径 10，边框宽度 2
+        Paint.drawBorderedRectangle(rect, fill, border, 2);
+        Paint.drawBorderedRoundedRectangle(rect, 5, fill, border, 2);
     }
 
     @Override
