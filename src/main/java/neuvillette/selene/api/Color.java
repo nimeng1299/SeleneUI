@@ -17,7 +17,7 @@ public class Color {
     public int Red() {
         return r;
     }
-    
+
     public int Green() {
         return g;
     }
