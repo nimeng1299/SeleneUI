@@ -3,7 +3,9 @@ package neuvillette.selene.api;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
@@ -11,6 +13,7 @@ import net.neoforged.neoforge.client.GlStateBackup;
 import org.joml.Matrix4f;
 
 import java.util.Objects;
+import java.util.TreeSet;
 import java.util.function.Consumer;
 
 public class Paint {
@@ -122,6 +125,201 @@ public class Paint {
         });
     }
 
+    /**
+     * 绘制带边框的实心矩形。边框向内绘制，宽度不超过短边的一半。
+     * 填充和边框互不重叠，支持透明填充、半透明边框和小数宽度。
+     */
+    public static void drawBorderedRectangle(Rect rect, Color fillColor, Color borderColor, float borderWidth) {
+        drawBorderedRectangle(new Matrix4f(), rect, fillColor, borderColor, borderWidth);
+    }
+
+    /** 使用指定的局部变换绘制带边框的矩形。 */
+    public static void drawBorderedRectangle(
+            Matrix4f pose, Rect rect, Color fillColor, Color borderColor, float borderWidth
+    ) {
+        Objects.requireNonNull(pose, "pose");
+        Objects.requireNonNull(rect, "rect");
+        Objects.requireNonNull(fillColor, "fillColor");
+        Objects.requireNonNull(borderColor, "borderColor");
+        RenderSystem.assertOnRenderThread();
+        if (!Float.isFinite(borderWidth)) {
+            throw new IllegalArgumentException("Border width must be finite");
+        }
+
+        float left = Math.min(rect.x(), rect.x2());
+        float top = Math.min(rect.y(), rect.y2());
+        float right = Math.max(rect.x(), rect.x2());
+        float bottom = Math.max(rect.y(), rect.y2());
+        if (left == right || top == bottom) {
+            return;
+        }
+
+        float width = Math.clamp(borderWidth, 0f, Math.min(right - left, bottom - top) / 2f);
+        int fill = argb(fillColor);
+        int border = argb(borderColor);
+        draw(VertexFormat.Mode.QUADS, buffer -> {
+            addRectangle(buffer, pose, left + width, top + width, right - width, bottom - width, fill);
+            addRectangle(buffer, pose, left, top, right, top + width, border);
+            addRectangle(buffer, pose, left, bottom - width, right, bottom, border);
+            addRectangle(buffer, pose, left, top + width, left + width, bottom - width, border);
+            addRectangle(buffer, pose, right - width, top + width, right, bottom - width, border);
+        });
+    }
+
+    /** 绘制带边框的实心圆，radius 为包含边框的外半径，边框向内绘制。 */
+    public static void drawBorderedCircle(
+            float centerX, float centerY, float radius, Color fillColor, Color borderColor, float borderWidth
+    ) {
+        drawBorderedCircle(new Matrix4f(), centerX, centerY, radius, fillColor, borderColor, borderWidth);
+    }
+
+    /** 使用指定的局部变换绘制带边框的圆。 */
+    public static void drawBorderedCircle(
+            Matrix4f pose, float centerX, float centerY, float radius,
+            Color fillColor, Color borderColor, float borderWidth
+    ) {
+        drawBorderedSector(pose, centerX, centerY, radius, 0, 360, fillColor, borderColor, borderWidth, false);
+    }
+
+    /**
+     * 绘制带边框的扇形，角度规则与 drawSector 相同，radius 为外半径。
+     * drawRadii 为 true 时绘制圆弧边和两条半径边，为 false 时只绘制圆弧边。
+     * 边框向内绘制；整圆没有半径边；非正边框宽度表示仅绘制填充。
+     * 填充和各段边框互不重叠，透明填充也不会露出底层边框。
+     */
+    public static void drawBorderedSector(
+            float centerX, float centerY, float radius, int startAngle, int endAngle,
+            Color fillColor, Color borderColor, float borderWidth, boolean drawRadii
+    ) {
+        drawBorderedSector(
+                new Matrix4f(), centerX, centerY, radius, startAngle, endAngle,
+                fillColor, borderColor, borderWidth, drawRadii
+        );
+    }
+
+    /** 使用指定的局部变换绘制带边框的扇形。 */
+    public static void drawBorderedSector(
+            Matrix4f pose, float centerX, float centerY, float radius, int startAngle, int endAngle,
+            Color fillColor, Color borderColor, float borderWidth, boolean drawRadii
+    ) {
+        Objects.requireNonNull(pose, "pose");
+        Objects.requireNonNull(fillColor, "fillColor");
+        Objects.requireNonNull(borderColor, "borderColor");
+        RenderSystem.assertOnRenderThread();
+        if (!Float.isFinite(centerX) || !Float.isFinite(centerY)
+                || !Float.isFinite(radius) || !Float.isFinite(borderWidth)) {
+            throw new IllegalArgumentException("Circle center, radius and border width must be finite");
+        }
+
+        long difference = (long) endAngle - startAngle;
+        int sweep = (int) Math.floorMod(difference, 360L);
+        int sweepAngle = sweep == 0 && difference != 0 ? 360 : sweep;
+        if (radius <= 0 || sweepAngle == 0) {
+            return;
+        }
+
+        float width = Math.clamp(borderWidth, 0f, radius);
+        int start = Math.floorMod(startAngle, 360);
+        int fill = argb(fillColor);
+        int border = argb(borderColor);
+        draw(VertexFormat.Mode.QUADS, buffer -> addBorderedSector(
+                buffer, pose, centerX, centerY, radius, start, sweepAngle,
+                fill, border, width, drawRadii && sweepAngle < 360 && width > 0
+        ));
+    }
+
+    private static int argb(Color color) {
+        int alpha = Math.round(Math.clamp(color.Alpha(), 0, 100) * 255f / 100f);
+        return (alpha << 24) | (Math.clamp(color.Red(), 0, 255) << 16)
+                | (Math.clamp(color.Green(), 0, 255) << 8) | Math.clamp(color.Blue(), 0, 255);
+    }
+
+    private static void addRectangle(
+            VertexConsumer buffer, Matrix4f pose, float left, float top, float right, float bottom, int color
+    ) {
+        if ((color >>> 24) == 0 || left >= right || top >= bottom) {
+            return;
+        }
+        buffer.addVertex(pose, left, top, 0f).setColor(color);
+        buffer.addVertex(pose, left, bottom, 0f).setColor(color);
+        buffer.addVertex(pose, right, bottom, 0f).setColor(color);
+        buffer.addVertex(pose, right, top, 0f).setColor(color);
+    }
+
+    private static void addBorderedSector(
+            VertexConsumer buffer, Matrix4f pose, float centerX, float centerY, float radius,
+            int start, int sweep, int fill, int border, float width, boolean drawRadii
+    ) {
+        float innerRadius = radius - width;
+        int segments = Math.clamp(
+                (int) Math.ceil(Math.toRadians(sweep) * Math.max(radius, 16f) / 2.0), 1, 4096
+        );
+        TreeSet<Double> offsets = new TreeSet<>();
+        for (int i = 0; i <= segments; i++) {
+            offsets.add((double) sweep * i / segments);
+        }
+        if (drawRadii) {
+            // 加入直边和内圆的交点，避免细边框在圆弧接头处变窄。
+            if (innerRadius > width) {
+                double margin = Math.toDegrees(Math.asin(width / innerRadius));
+                if (margin < sweep) {
+                    offsets.add(margin);
+                    offsets.add(sweep - margin);
+                }
+            }
+            offsets.add(sweep / 2.0);
+            if (sweep > 180) {
+                offsets.add(90.0);
+                offsets.add(sweep - 90.0);
+            }
+        }
+
+        double previous = 0;
+        float previousFillStart = drawRadii ? radialBorderRadius(0, sweep, width, innerRadius) : 0;
+        for (double offset : offsets.tailSet(0.0, false)) {
+            float fillStart = drawRadii ? radialBorderRadius(offset, sweep, width, innerRadius) : 0;
+            double angle1 = Math.toRadians((start + previous) % 360.0);
+            double angle2 = Math.toRadians((start + offset) % 360.0);
+            // 将每一片拆成圆弧边框、半径边框、填充三个互不重叠的区域。
+            addArcBand(buffer, pose, centerX, centerY, angle1, angle2,
+                    innerRadius, innerRadius, radius, radius, border);
+            addArcBand(buffer, pose, centerX, centerY, angle1, angle2,
+                    0, 0, previousFillStart, fillStart, border);
+            addArcBand(buffer, pose, centerX, centerY, angle1, angle2,
+                    previousFillStart, fillStart, innerRadius, innerRadius, fill);
+            previous = offset;
+            previousFillStart = fillStart;
+        }
+    }
+
+    private static float radialBorderRadius(double offset, int sweep, float width, float innerRadius) {
+        double factor = Math.min(rayDistanceFactor(Math.toRadians(offset)),
+                rayDistanceFactor(Math.toRadians(sweep - offset)));
+        return factor <= 0 ? innerRadius : (float) Math.min(innerRadius, width / factor);
+    }
+
+    private static double rayDistanceFactor(double angle) {
+        // 投影落在半径线的反方向时，最近的边界点是圆心。
+        return Math.cos(angle) > 0 ? Math.abs(Math.sin(angle)) : 1.0;
+    }
+
+    private static void addArcBand(
+            VertexConsumer buffer, Matrix4f pose, float centerX, float centerY, double angle1, double angle2,
+            float inner1, float inner2, float outer1, float outer2, int color
+    ) {
+        if ((color >>> 24) == 0 || (inner1 == outer1 && inner2 == outer2)) {
+            return;
+        }
+        float dx1 = (float) Math.sin(angle1);
+        float dy1 = (float) -Math.cos(angle1);
+        float dx2 = (float) Math.sin(angle2);
+        float dy2 = (float) -Math.cos(angle2);
+        buffer.addVertex(pose, centerX + dx1 * outer1, centerY + dy1 * outer1, 0f).setColor(color);
+        buffer.addVertex(pose, centerX + dx1 * inner1, centerY + dy1 * inner1, 0f).setColor(color);
+        buffer.addVertex(pose, centerX + dx2 * inner2, centerY + dy2 * inner2, 0f).setColor(color);
+        buffer.addVertex(pose, centerX + dx2 * outer2, centerY + dy2 * outer2, 0f).setColor(color);
+    }
+
     private static void draw(VertexFormat.Mode mode, Consumer<BufferBuilder> vertices) {
         GlStateBackup previousState = new GlStateBackup();
         RenderSystem.backupGlState(previousState);
@@ -134,7 +332,10 @@ public class Paint {
             BufferBuilder buffer = Tesselator.getInstance().begin(mode, DefaultVertexFormat.POSITION_COLOR);
             vertices.accept(buffer);
             // 直接提交网格，沿用原版 GUI 的着色器、透明混合和深度设置。
-            RenderType.gui().draw(buffer.buildOrThrow());
+            MeshData mesh = buffer.build();
+            if (mesh != null) {
+                RenderType.gui().draw(mesh);
+            }
         } finally {
             RenderSystem.setShaderColor(
                     previousShaderColor[0], previousShaderColor[1],

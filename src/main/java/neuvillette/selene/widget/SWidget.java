@@ -41,16 +41,19 @@ public class SWidget extends AbstractWidget {
 
     @Override
     public void renderWidget(GuiGraphics guiGraphics, int i, int i1, float v) {
-        Color color = Color.fromRGB(40, 160, 255);
+        Color fill = Color.fromRGB(40, 160, 255);
+        Color border = Color.fromRGB(255, 255, 255);
 
-// 圆心 (100, 100)，半径 30
-        Paint.drawCircle(200, 200, 30, color);
+        Paint.drawBorderedRectangle(
+                Rect.from_xywh(20, 20, 120, 40), fill, border, 2);
 
-// 右上方的四分之一圆
-        Paint.drawSector(100, 100, 30, 0, 90, color);
+        Paint.drawBorderedCircle(
+                100, 100, 30, fill, border, 2);
 
-// 跨过 0°，绘制顶部的 90° 扇形
-        Paint.drawSector(200, 100, 30, 315, 45, color);
+        Paint.drawBorderedSector(
+                200, 200, 30, 315, 45, fill, border, 2, true);
+        Paint.drawBorderedSector(
+                100, 200, 30, 315, 45, fill, border, 2, false);
     }
 
     @Override
