@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.neoforged.neoforge.client.GlStateBackup;
@@ -228,7 +229,7 @@ public class Paint {
         ));
     }
 
-    /** 绘制实心圆角矩形，圆角半径限制在 0 到短边的一半之间。 */
+    /** 绘制带屏幕像素抗锯齿的实心圆角矩形，圆角半径限制在 0 到短边的一半之间。 */
     public static void drawRoundedRectangle(Rect rect, float radius, Color color) {
         drawRoundedRectangle(new Matrix4f(), rect, radius, color);
     }
@@ -242,6 +243,7 @@ public class Paint {
      * 绘制带边框的圆角矩形，radius 为外侧圆角半径，边框向内绘制。
      * 内侧圆角半径为 max(radius - borderWidth, 0)，边框宽度不超过短边的一半。
      * 填充和边框互不重叠，支持透明填充、半透明边框和小数宽度。
+     * 外轮廓和边框内缘均按屏幕像素进行抗锯齿，适配 GUI 缩放和局部变换。
      */
     public static void drawBorderedRoundedRectangle(
             Rect rect, float radius, Color fillColor, Color borderColor, float borderWidth
@@ -280,9 +282,77 @@ public class Paint {
 
         int fill = argb(fillColor);
         int border = argb(borderColor);
+        ShaderInstance shader = PaintShaders.roundedRectangle();
+        if (shader != null) {
+            drawSmoothRoundedRectangle(pose, left, top, right, bottom, cornerRadius, width, fill, border, shader);
+            return;
+        }
+        // 资源尚未加载时沿用网格绘制，正常加载后的界面使用距离场着色器。
         draw(VertexFormat.Mode.QUADS, buffer -> addRoundedRectangle(
                 buffer, pose, left, top, right, bottom, cornerRadius, width, fill, border
         ));
+    }
+
+    private static void drawSmoothRoundedRectangle(
+            Matrix4f pose, float left, float top, float right, float bottom,
+            float radius, float borderWidth, int fill, int border, ShaderInstance shader
+    ) {
+        if ((fill >>> 24) == 0 && (border >>> 24) == 0) {
+            return;
+        }
+        var window = Minecraft.getInstance().getWindow();
+        Matrix4f localToClip = new Matrix4f(RenderSystem.getProjectionMatrix())
+                .mul(RenderSystem.getModelViewMatrix()).mul(pose);
+        float[] padding = roundedRectanglePadding(
+                localToClip, left + (right - left) / 2f, top + (bottom - top) / 2f,
+                window.getWidth(), window.getHeight()
+        );
+        if (padding == null) {
+            return;
+        }
+
+        float width = right - left;
+        float height = bottom - top;
+        shader.safeGetUniform("RectSize").set(width, height);
+        shader.safeGetUniform("Radius").set(radius);
+        shader.safeGetUniform("BorderWidth").set(borderWidth);
+        setColorUniform(shader, "FillColor", fill);
+        setColorUniform(shader, "BorderColor", border);
+        float padX = padding[0];
+        float padY = padding[1];
+        draw(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX, PaintShaders.roundedRectangleType(), buffer -> {
+            // 给轮廓外侧留出一个屏幕像素，避免抗锯齿过渡被包围矩形裁掉。
+            buffer.addVertex(pose, left - padX, top - padY, 0f).setUv(-padX, -padY);
+            buffer.addVertex(pose, left - padX, bottom + padY, 0f).setUv(-padX, height + padY);
+            buffer.addVertex(pose, right + padX, bottom + padY, 0f).setUv(width + padX, height + padY);
+            buffer.addVertex(pose, right + padX, top - padY, 0f).setUv(width + padX, -padY);
+        });
+    }
+
+    private static void setColorUniform(ShaderInstance shader, String name, int color) {
+        shader.safeGetUniform(name).set(
+                ((color >>> 16) & 255) / 255f, ((color >>> 8) & 255) / 255f,
+                (color & 255) / 255f, (color >>> 24) / 255f
+        );
+    }
+
+    private static float[] roundedRectanglePadding(
+            Matrix4f localToClip, float centerX, float centerY, int framebufferWidth, int framebufferHeight
+    ) {
+        double x = localToClip.m00() * (double) centerX + localToClip.m10() * (double) centerY + localToClip.m30();
+        double y = localToClip.m01() * (double) centerX + localToClip.m11() * (double) centerY + localToClip.m31();
+        double w = localToClip.m03() * (double) centerX + localToClip.m13() * (double) centerY + localToClip.m33();
+        double a = (localToClip.m00() * w - x * localToClip.m03()) / (w * w) * framebufferWidth / 2;
+        double b = (localToClip.m10() * w - x * localToClip.m13()) / (w * w) * framebufferWidth / 2;
+        double c = (localToClip.m01() * w - y * localToClip.m03()) / (w * w) * framebufferHeight / 2;
+        double d = (localToClip.m11() * w - y * localToClip.m13()) / (w * w) * framebufferHeight / 2;
+        double determinant = Math.abs(a * d - b * c);
+        if (!Double.isFinite(determinant) || determinant < 1e-12) {
+            return null;
+        }
+        // 屏幕像素在局部坐标中的足迹，包含非等比缩放和旋转。
+        return new float[] {(float) ((Math.abs(d) + Math.abs(b)) / determinant),
+                (float) ((Math.abs(c) + Math.abs(a)) / determinant)};
     }
 
     private static int argb(Color color) {
@@ -440,6 +510,12 @@ public class Paint {
     }
 
     private static void draw(VertexFormat.Mode mode, Consumer<BufferBuilder> vertices) {
+        draw(mode, DefaultVertexFormat.POSITION_COLOR, RenderType.gui(), vertices);
+    }
+
+    private static void draw(
+            VertexFormat.Mode mode, VertexFormat format, RenderType renderType, Consumer<BufferBuilder> vertices
+    ) {
         GlStateBackup previousState = new GlStateBackup();
         RenderSystem.backupGlState(previousState);
         ShaderInstance previousShader = RenderSystem.getShader();
@@ -448,12 +524,12 @@ public class Paint {
         try {
             RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 
-            BufferBuilder buffer = Tesselator.getInstance().begin(mode, DefaultVertexFormat.POSITION_COLOR);
+            BufferBuilder buffer = Tesselator.getInstance().begin(mode, format);
             vertices.accept(buffer);
             // 直接提交网格，沿用原版 GUI 的着色器、透明混合和深度设置。
             MeshData mesh = buffer.build();
             if (mesh != null) {
-                RenderType.gui().draw(mesh);
+                renderType.draw(mesh);
             }
         } finally {
             RenderSystem.setShaderColor(
