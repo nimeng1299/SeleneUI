@@ -13,6 +13,7 @@ import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import neuvillette.selene.api.Color;
 import neuvillette.selene.layout.Constraint;
 import neuvillette.selene.layout.Direction;
+import neuvillette.selene.screen.GalleryScreen;
 import neuvillette.selene.screen.SeleneScreen;
 import neuvillette.selene.screen.StateDemoScreen;
 import neuvillette.selene.widget.Block;
@@ -28,7 +29,7 @@ public class SeleneCommand {
                     root.addChild(panel("left", 40, 100, 180), Constraint.length(90));
                     root.addChild(panel("right", 40, 100, 180), Constraint.fill(1));
 
-                    Minecraft.getInstance().setScreen(new SeleneScreen(Component.literal("Layout demo"), root, true));
+                    Minecraft.getInstance().setScreen(new GalleryScreen());
                     return Command.SINGLE_SUCCESS;
                 })
                 .then(Commands.literal("state").executes(context -> {
