@@ -14,6 +14,7 @@ import neuvillette.selene.api.Color;
 import neuvillette.selene.layout.Constraint;
 import neuvillette.selene.layout.Direction;
 import neuvillette.selene.screen.SeleneScreen;
+import neuvillette.selene.screen.StateDemoScreen;
 import neuvillette.selene.widget.Block;
 import neuvillette.selene.widget.Layout;
 
@@ -29,7 +30,11 @@ public class SeleneCommand {
 
                     Minecraft.getInstance().setScreen(new SeleneScreen(Component.literal("Layout demo"), root, true));
                     return Command.SINGLE_SUCCESS;
-                });
+                })
+                .then(Commands.literal("state").executes(context -> {
+                    Minecraft.getInstance().setScreen(new StateDemoScreen());
+                    return Command.SINGLE_SUCCESS;
+                }));
 
         // 将命令注册到客户端的命令调度器中
         event.getDispatcher().register(command);

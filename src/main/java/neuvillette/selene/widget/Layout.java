@@ -123,10 +123,19 @@ public class Layout extends BaseWidget {
     }
 
     public <T extends BaseWidget> T addChild(T child, Constraint constraint) {
+        Objects.requireNonNull(child, "child");
         Objects.requireNonNull(constraint, "constraint");
-        super.addChild(child);
+        // 已挂载的父控件会在加入时立即激活子控件订阅；先让初始回调看到完整约束。
         constraints.put(child, constraint);
         invalidateLayout();
+        try {
+            super.addChild(child);
+        } finally {
+            // 初始回调可能移除或换绑控件，加入失败也不能残留无主约束。
+            if (child.getParent() != this) {
+                constraints.remove(child);
+            }
+        }
         return child;
     }
 

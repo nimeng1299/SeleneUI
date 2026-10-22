@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
@@ -15,6 +16,8 @@ import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.network.chat.Component;
+import neuvillette.selene.state.State;
+import neuvillette.selene.state.Subscription;
 
 /**
  * 支持相对父控件内容区域左上角定位的控件基类，坐标使用 GUI 缩放后的单位。
@@ -28,10 +31,14 @@ import net.minecraft.network.chat.Component;
  * 只将根控件注册到 Screen。绑定父控件会自动加入其子控件列表，由父控件递归绘制、
  * 分发输入和管理焦点。子控件按添加顺序绘制，后添加的优先接收鼠标事件。
  * 隐藏父控件会隐藏整个子树，禁用父控件会阻止整个子树的输入；默认不裁剪越界子控件。
+ * <p>
+ * 组件可通过 subscribe(state, listener) 声明状态绑定。挂载时订阅，卸载时暂停，
+ * 重新挂载时恢复并同步最新值；SeleneScreen 自动管理根控件的挂载生命周期。
  */
 public abstract class BaseWidget extends AbstractWidget implements ContainerEventHandler {
     private final List<BaseWidget> children = new ArrayList<>();
     private final List<BaseWidget> childrenView = Collections.unmodifiableList(children);
+    private final WidgetSubscriptions subscriptions = new WidgetSubscriptions();
     @Nullable
     private BaseWidget parent;
     @Nullable
@@ -52,6 +59,52 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
     protected BaseWidget(@Nullable BaseWidget parent, int x, int y, int width, int height, Component message) {
         this(x, y, width, height, message);
         setRelativePosition(parent, x, y);
+    }
+
+    /**
+     * 在组件内声明状态绑定。挂载时订阅并立即同步当前值，卸载时暂停，重新挂载时恢复。
+     * 已挂载组件的新增绑定立即生效；返回句柄可永久取消这一条绑定。
+     * 建议在组件构造器中完成所需字段初始化后调用。
+     */
+    protected final <T> Subscription subscribe(State<T> state, Consumer<? super T> observer) {
+        return subscriptions.subscribe(state, observer);
+    }
+
+    /** 是否已启用本组件的状态绑定；与 visible、active 独立。 */
+    public final boolean isMounted() {
+        return subscriptions.isMounted();
+    }
+
+    /**
+     * 挂载本组件及子树，重复调用不会重复订阅。SeleneScreen 自动调用；
+     * 普通 Screen 应在 init 中对根控件调用。挂载失败时卸载本次子树，可再次尝试。
+     */
+    public final void mount() {
+        try {
+            subscriptions.mount();
+            for (BaseWidget child : List.copyOf(children)) {
+                if (!isMounted()) {
+                    break;
+                }
+                if (child.parent == this) {
+                    child.mount();
+                }
+            }
+        } catch (RuntimeException | Error error) {
+            unmount();
+            throw error;
+        }
+    }
+
+    /** 暂停整棵子树的组件订阅并清理交互状态，保留绑定定义以便重新挂载。 */
+    public final void unmount() {
+        subscriptions.unmount();
+        clearInteraction();
+        for (BaseWidget child : List.copyOf(children)) {
+            if (child.parent == this) {
+                child.unmount();
+            }
+        }
     }
 
     /** 按父级到子级的顺序更新本控件布局；几何查询、绘制和输入会自动调用。 */
@@ -168,7 +221,7 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
         return child;
     }
 
-    /** 移除直接子控件并保留其屏幕位置，同时清除相关焦点和鼠标捕获。 */
+    /** 移除直接子控件并保留其屏幕位置，同时暂停组件订阅并清除相关焦点和鼠标捕获。 */
     public boolean removeChild(BaseWidget child) {
         if (child.parent != this) {
             return false;
@@ -188,14 +241,20 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
         validateParent(parent);
         int x = getX();
         int y = getY();
-        changeParent(parent);
+        boolean changed = changeParent(parent);
         setPosition(x, y);
+        if (changed) {
+            synchronizeMount();
+        }
     }
 
     /** 同时设置父控件及相对偏移；parent 为 null 时，偏移即屏幕坐标。 */
     public void setRelativePosition(@Nullable BaseWidget parent, int x, int y) {
-        changeParent(parent);
+        boolean changed = changeParent(parent);
         setRelativePosition(x, y);
+        if (changed) {
+            synchronizeMount();
+        }
     }
 
     /** 设置相对于当前父控件内容区域左上角的偏移，允许负值；无父控件时使用屏幕坐标。 */
@@ -550,10 +609,18 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
         setFocused((GuiEventListener) null);
     }
 
-    private void changeParent(@Nullable BaseWidget nextParent) {
+    private void synchronizeMount() {
+        if (parent != null && parent.isMounted()) {
+            mount();
+        } else {
+            unmount();
+        }
+    }
+
+    private boolean changeParent(@Nullable BaseWidget nextParent) {
         validateParent(nextParent);
         if (parent == nextParent) {
-            return;
+            return false;
         }
         if (parent != null) {
             if (parent.focusedChild == this) {
@@ -571,6 +638,7 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
             parent.children.add(this);
             parent.invalidateLayout();
         }
+        return true;
     }
 
     private void validateParent(@Nullable BaseWidget parent) {

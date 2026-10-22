@@ -27,8 +27,15 @@ public class SeleneScreen extends Screen {
         if (fitToScreen) {
             widget.setRectangle(width, height, 0, 0);
         }
+        widget.mount();
         widget.layout();
         this.addRenderableWidget(widget); // 子控件由父控件绘制和分发事件
+    }
+
+    @Override
+    public void removed() {
+        widget.unmount();
+        super.removed();
     }
 
     @Override
