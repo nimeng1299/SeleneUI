@@ -293,6 +293,94 @@ public class Paint {
         ));
     }
 
+    /**
+     * 绘制横向胶囊形：上下为直线，左右为半圆，半径为高度的一半。
+     * 支持负宽高；归一化后宽度必须大于等于高度，相等时为圆，任一边为 0 时不绘制。
+     * 沿用圆角矩形的屏幕像素抗锯齿。
+     * @throws IllegalArgumentException 非空矩形的宽度小于高度时抛出
+     */
+    public static void drawCapsule(Rect rect, Color color) {
+        drawCapsule(new Matrix4f(), rect, color);
+    }
+
+    /** 使用指定的局部变换绘制横向胶囊形，尺寸规则与无矩阵重载相同。 */
+    public static void drawCapsule(Matrix4f pose, Rect rect, Color color) {
+        drawRoundedRectangle(pose, rect, horizontalCapsuleRadius(rect), color);
+    }
+
+    /**
+     * 绘制带边框的横向胶囊形，尺寸规则与 drawCapsule 相同。
+     * 边框向内绘制，宽度限制在 0 到高度的一半之间，外轮廓和边框内缘均抗锯齿。
+     */
+    public static void drawBorderedCapsule(Rect rect, Color fillColor, Color borderColor, float borderWidth) {
+        drawBorderedCapsule(new Matrix4f(), rect, fillColor, borderColor, borderWidth);
+    }
+
+    /** 使用指定的局部变换绘制带边框的横向胶囊形。 */
+    public static void drawBorderedCapsule(
+            Matrix4f pose, Rect rect, Color fillColor, Color borderColor, float borderWidth
+    ) {
+        drawBorderedRoundedRectangle(pose, rect, horizontalCapsuleRadius(rect), fillColor, borderColor, borderWidth);
+    }
+
+    /**
+     * 绘制竖向胶囊形：左右为直线，上下为半圆，半径为宽度的一半。
+     * 支持负宽高；归一化后高度必须大于等于宽度，相等时为圆，任一边为 0 时不绘制。
+     * 沿用圆角矩形的屏幕像素抗锯齿。
+     * @throws IllegalArgumentException 非空矩形的高度小于宽度时抛出
+     */
+    public static void drawVerticalCapsule(Rect rect, Color color) {
+        drawVerticalCapsule(new Matrix4f(), rect, color);
+    }
+
+    /** 使用指定的局部变换绘制竖向胶囊形，尺寸规则与无矩阵重载相同。 */
+    public static void drawVerticalCapsule(Matrix4f pose, Rect rect, Color color) {
+        drawRoundedRectangle(pose, rect, verticalCapsuleRadius(rect), color);
+    }
+
+    /**
+     * 绘制带边框的竖向胶囊形，尺寸规则与 drawVerticalCapsule 相同。
+     * 边框向内绘制，宽度限制在 0 到矩形宽度的一半之间，外轮廓和边框内缘均抗锯齿。
+     */
+    public static void drawBorderedVerticalCapsule(Rect rect, Color fillColor, Color borderColor, float borderWidth) {
+        drawBorderedVerticalCapsule(new Matrix4f(), rect, fillColor, borderColor, borderWidth);
+    }
+
+    /** 使用指定的局部变换绘制带边框的竖向胶囊形。 */
+    public static void drawBorderedVerticalCapsule(
+            Matrix4f pose, Rect rect, Color fillColor, Color borderColor, float borderWidth
+    ) {
+        drawBorderedRoundedRectangle(pose, rect, verticalCapsuleRadius(rect), fillColor, borderColor, borderWidth);
+    }
+
+    private static float horizontalCapsuleRadius(Rect rect) {
+        Objects.requireNonNull(rect, "rect");
+        float left = Math.min(rect.x(), rect.x2());
+        float top = Math.min(rect.y(), rect.y2());
+        float right = Math.max(rect.x(), rect.x2());
+        float bottom = Math.max(rect.y(), rect.y2());
+        float width = right - left;
+        float height = bottom - top;
+        if (width > 0f && height > 0f && width < height) {
+            throw new IllegalArgumentException("Horizontal capsule width must be at least its height");
+        }
+        return height / 2f;
+    }
+
+    private static float verticalCapsuleRadius(Rect rect) {
+        Objects.requireNonNull(rect, "rect");
+        float left = Math.min(rect.x(), rect.x2());
+        float top = Math.min(rect.y(), rect.y2());
+        float right = Math.max(rect.x(), rect.x2());
+        float bottom = Math.max(rect.y(), rect.y2());
+        float width = right - left;
+        float height = bottom - top;
+        if (width > 0f && height > 0f && height < width) {
+            throw new IllegalArgumentException("Vertical capsule height must be at least its width");
+        }
+        return width / 2f;
+    }
+
     private static void drawSmoothRoundedRectangle(
             Matrix4f pose, float left, float top, float right, float bottom,
             float radius, float borderWidth, int fill, int border, ShaderInstance shader
