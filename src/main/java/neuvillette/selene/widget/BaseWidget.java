@@ -43,6 +43,7 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
     private int paddingRight;
     private int paddingBottom;
     private int paddingLeft;
+    private boolean layingOut;
 
     protected BaseWidget(int x, int y, int width, int height, Component message) {
         super(x, y, width, height, message);
@@ -51,6 +52,44 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
     protected BaseWidget(@Nullable BaseWidget parent, int x, int y, int width, int height, Component message) {
         this(x, y, width, height, message);
         setRelativePosition(parent, x, y);
+    }
+
+    /** 按父级到子级的顺序更新本控件布局；几何查询、绘制和输入会自动调用。 */
+    public final void layout() {
+        if (layingOut) {
+            return;
+        }
+        layingOut = true;
+        try {
+            ensureParentLayout();
+            layoutChildren();
+        } finally {
+            layingOut = false;
+        }
+    }
+
+    /** 普通控件保留手动坐标；布局容器覆盖此方法分配子控件的位置和尺寸。 */
+    protected void layoutChildren() {
+    }
+
+    /** 尺寸、内边距或子控件发生变化时，仅标记布局失效，不立即访问正在构造的子控件。 */
+    protected void invalidateLayout() {
+    }
+
+    protected void onChildRemoved(BaseWidget child) {
+        invalidateLayout();
+    }
+
+    private void ensureParentLayout() {
+        if (parent != null) {
+            parent.layout();
+        }
+    }
+
+    private void invalidateParentLayout() {
+        if (parent != null) {
+            parent.invalidateLayout();
+        }
     }
 
     /** 设置四边相同的内边距，单位为 GUI 坐标，必须非负。 */
@@ -72,6 +111,7 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
         paddingRight = right;
         paddingBottom = bottom;
         paddingLeft = left;
+        invalidateLayout();
     }
 
     public int getPaddingTop() {
@@ -162,23 +202,28 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
     public void setRelativePosition(int x, int y) {
         super.setX(x);
         super.setY(y);
+        invalidateParentLayout();
     }
 
     public int getRelativeX() {
+        ensureParentLayout();
         return super.getX();
     }
 
     public int getRelativeY() {
+        ensureParentLayout();
         return super.getY();
     }
 
     @Override
     public int getX() {
+        ensureParentLayout();
         return super.getX() + (parent == null ? 0 : parent.getContentX());
     }
 
     @Override
     public int getY() {
+        ensureParentLayout();
         return super.getY() + (parent == null ? 0 : parent.getContentY());
     }
 
@@ -186,12 +231,47 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
     @Override
     public void setX(int x) {
         super.setX(x - (parent == null ? 0 : parent.getContentX()));
+        invalidateParentLayout();
     }
 
     /** 设置屏幕 Y 坐标，同时更新相对于父控件的偏移。 */
     @Override
     public void setY(int y) {
         super.setY(y - (parent == null ? 0 : parent.getContentY()));
+        invalidateParentLayout();
+    }
+
+    @Override
+    public int getWidth() {
+        ensureParentLayout();
+        return super.getWidth();
+    }
+
+    @Override
+    public int getHeight() {
+        ensureParentLayout();
+        return super.getHeight();
+    }
+
+    @Override
+    public void setWidth(int width) {
+        super.setWidth(width);
+        invalidateLayout();
+        invalidateParentLayout();
+    }
+
+    @Override
+    public void setHeight(int height) {
+        super.setHeight(height);
+        invalidateLayout();
+        invalidateParentLayout();
+    }
+
+    @Override
+    public void setSize(int width, int height) {
+        super.setSize(width, height);
+        invalidateLayout();
+        invalidateParentLayout();
     }
 
     /** 子类只绘制自身，子树的绘制统一由基类完成。坐标仍为屏幕坐标。 */
@@ -199,6 +279,7 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
 
     @Override
     protected final void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        layout();
         if (!isVisibleInTree()) {
             isHovered = false;
             return;
@@ -231,6 +312,7 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
 
     @Override
     public Optional<GuiEventListener> getChildAt(double mouseX, double mouseY) {
+        layout();
         if (isActive()) {
             for (BaseWidget child : List.copyOf(children).reversed()) {
                 if (child.parent == this && child.isMouseOver(mouseX, mouseY)) {
@@ -243,6 +325,7 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
+        layout();
         if (isActive()) {
             for (BaseWidget child : List.copyOf(children)) {
                 if (child.parent == this && child.isActive()) {
@@ -254,6 +337,7 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        layout();
         if (!isActive()) {
             return false;
         }
@@ -392,6 +476,7 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
     @Nullable
     @Override
     public ComponentPath nextFocusPath(FocusNavigationEvent event) {
+        layout();
         if (!isActive()) {
             return null;
         }
@@ -478,11 +563,13 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
                 parent.setDragging(false);
             }
             parent.children.remove(this);
+            parent.onChildRemoved(this);
         }
         clearInteraction();
         parent = nextParent;
         if (parent != null) {
             parent.children.add(this);
+            parent.invalidateLayout();
         }
     }
 
