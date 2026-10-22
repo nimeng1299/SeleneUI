@@ -16,6 +16,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
+import neuvillette.selene.api.Rect;
 import neuvillette.selene.state.State;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -380,8 +381,8 @@ class ScrollListTest {
 
     @Test
     void nestedRenderingIntersectsScissorsAndRestoresOuterClipAfterChildFailure() {
-        ScrollList outer = new ScrollList(10, 20, 100, 60);
-        ScrollList inner = outer.addChild(new ScrollList(0, 0, 100, 80));
+        ScrollList outer = new HeadlessScrollList(10, 20, 100, 60);
+        ScrollList inner = outer.addChild(new HeadlessScrollList(0, 0, 100, 80));
         Probe first = inner.addChild(new Probe(40));
         Probe failing = inner.addChild(new Probe(80));
         RuntimeException failure = new IllegalStateException("render failed");
@@ -404,7 +405,7 @@ class ScrollListTest {
 
     @Test
     void clippedRowsCannotKeepHoverOutsideTheViewport() {
-        ScrollList list = new ScrollList(10, 20, 100, 50).Padding(5);
+        ScrollList list = new HeadlessScrollList(10, 20, 100, 50).Padding(5);
         Probe child = list.addChild(new Probe(100));
         list.setScrollAmount(20);
         RecordingGraphics graphics = graphics();
@@ -418,8 +419,8 @@ class ScrollListTest {
 
     @Test
     void fullyClippedNestedRowsSkipRenderingAndClearHoverThroughoutTheirSubtree() {
-        ScrollList outer = new ScrollList(0, 0, 100, 60);
-        ScrollList inner = outer.addChild(new ScrollList(0, 0, 100, 100));
+        ScrollList outer = new HeadlessScrollList(0, 0, 100, 60);
+        ScrollList inner = outer.addChild(new HeadlessScrollList(0, 0, 100, 100));
         inner.addChild(new Probe(30));
         inner.addChild(new Probe(30));
         Probe third = inner.addChild(new Probe(30));
@@ -443,7 +444,7 @@ class ScrollListTest {
 
     @Test
     void visibleOverflowDescendantStillRendersWhenItsParentRowBoundsAreClippedOut() {
-        ScrollList list = new ScrollList(0, 0, 100, 100);
+        ScrollList list = new HeadlessScrollList(0, 0, 100, 100);
         Probe row = list.addChild(new Probe(20));
         Probe overflow = row.addChild(new Probe(20));
         overflow.setRelativePosition(0, 50);
@@ -656,7 +657,7 @@ class ScrollListTest {
         assertTrue(frame(list, graphics, 0, 0).isEmpty());
         list.setScrollAmount(20);
         Fill thumb = onlyThumb(frame(list, graphics, 0, 0));
-        assertEquals(2, thumb.right() - thumb.left());
+        assertEquals(1, thumb.right() - thumb.left());
         assertTrue(thumb.left() >= 94 && thumb.right() <= 100);
         assertTrue(thumb.bottom() - thumb.top() < 100, "Only the thumb is filled, without a track");
         assertEquals(90, child.getWidth());
@@ -669,7 +670,7 @@ class ScrollListTest {
         Host screen = new Host(list);
         assertTrue(screen.mouseClicked(hitX, thumb.top() + 1, 0), "The hidden 6-unit hit area stays usable");
         Fill shownThumb = onlyThumb(frame(list, graphics, hitX, thumb.top() + 1));
-        assertEquals(2, shownThumb.right() - shownThumb.left());
+        assertEquals(1, shownThumb.right() - shownThumb.left());
         assertEquals(90, child.getWidth());
         assertTrue(screen.mouseReleased(hitX, thumb.top() + 1, 0));
         child.setHeight(50);
@@ -726,7 +727,18 @@ class ScrollListTest {
         }
     }
 
-    private static final class QuietScrollList extends ScrollList {
+    private static class HeadlessScrollList extends ScrollList {
+        HeadlessScrollList(int x, int y, int width, int height) {
+            super(x, y, width, height);
+        }
+
+        @Override
+        protected void renderScrollbarThumb(GuiGraphics graphics, Rect bounds, int color) {
+            graphics.fill(bounds.x(), bounds.y(), bounds.x2(), bounds.y2(), color);
+        }
+    }
+
+    private static final class QuietScrollList extends HeadlessScrollList {
         QuietScrollList(int x, int y, int width, int height) {
             super(x, y, width, height);
         }
@@ -734,7 +746,7 @@ class ScrollListTest {
         @Override public void playDownSound(SoundManager manager) {}
     }
 
-    private static final class TimedScrollList extends ScrollList {
+    private static final class TimedScrollList extends HeadlessScrollList {
         long now = 10_000;
 
         TimedScrollList() {

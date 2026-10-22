@@ -9,12 +9,15 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.network.chat.Component;
+import neuvillette.selene.api.Color;
+import neuvillette.selene.api.Paint;
+import neuvillette.selene.api.Rect;
 import org.lwjgl.glfw.GLFW;
 
 /**
  * 保留子控件自然高度的竖向滚动列表，隐藏项仍占据位置。
  * 子控件宽度填满视区，位置由列表管理；改变行高、尺寸、padding 或 spacing 后自动重排。
- * 溢出时在内容区域右侧预留 6 像素操作区及 4 像素间隙，绘制 2 像素宽的细滑块。
+ * 溢出时在内容区域右侧预留 6 像素操作区及 4 像素间隙，绘制 2 像素宽的胶囊形滑块。
  * 滚动或拖动时显示滑块，闲置 800ms 后在 200ms 内淡出；显隐不改变视区宽度。
  * 子树绘制和输入均裁剪到视区。
  * 本控件不绘制背景，空白区域不消费点击；滚轮到达边界时可交给外层滚动容器。
@@ -250,8 +253,18 @@ public class ScrollList extends BaseWidget {
         int right = boundedCoordinate((long) getContentX() + getContentWidth());
         int thumbTop = thumbY();
         int color = !isActive() ? 0x666666 : draggingScrollbar ? 0xDDDDDD : 0xAAAAAA;
-        graphics.fill(left, thumbTop, right, boundedCoordinate((long) thumbTop + thumbHeight()),
+        renderScrollbarThumb(graphics,
+                Rect.from_x1y1x2y2(left, thumbTop, right, boundedCoordinate((long) thumbTop + thumbHeight())),
                 alpha << 24 | color);
+    }
+
+    /** 以半宽为圆角半径绘制抗锯齿胶囊；极矮视区的半径由 Paint 按短边限制。 */
+    protected void renderScrollbarThumb(GuiGraphics graphics, Rect bounds, int color) {
+        // Paint 立即提交绘制，先提交之前的 GUI 批次以保持图层顺序。
+        graphics.flush();
+        Paint.drawRoundedRectangle(graphics.pose().last().pose(), bounds, bounds.width() / 2f,
+                Color.fromRGBA((color >>> 16) & 255, (color >>> 8) & 255, color & 255,
+                        Math.round((color >>> 24) * 100f / 255f)));
     }
 
     @Override
