@@ -8,7 +8,7 @@ import neuvillette.selene.state.State;
 import neuvillette.selene.widget.Block;
 import neuvillette.selene.widget.Layout;
 
-/** /selene state：点击任意面板修改同一个计数，两个面板同步显示。 */
+/** 跨组件数据同步 */
 public class StateDemoScreen extends SeleneScreen {
     private final State<Integer> count = new State<>(0);
 

@@ -14,6 +14,7 @@ import neuvillette.selene.api.Color;
 import neuvillette.selene.layout.Constraint;
 import neuvillette.selene.layout.Direction;
 import neuvillette.selene.screen.GalleryScreen;
+import neuvillette.selene.screen.ListDemoScreen;
 import neuvillette.selene.screen.SeleneScreen;
 import neuvillette.selene.screen.StateDemoScreen;
 import neuvillette.selene.widget.Block;
@@ -34,6 +35,10 @@ public class SeleneCommand {
                 })
                 .then(Commands.literal("state").executes(context -> {
                     Minecraft.getInstance().setScreen(new StateDemoScreen());
+                    return Command.SINGLE_SUCCESS;
+                }))
+                .then(Commands.literal("list").executes(context -> {
+                    Minecraft.getInstance().setScreen(new ListDemoScreen());
                     return Command.SINGLE_SUCCESS;
                 }));
 

@@ -15,6 +15,7 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.network.chat.Component;
 import neuvillette.selene.state.State;
 import neuvillette.selene.state.Subscription;
@@ -344,7 +345,7 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
             return;
         }
         // 被上层兄弟或子控件覆盖时，不显示本控件的悬停效果和提示。
-        isHovered = isHovered && isActive() && isTopmostAt(mouseX, mouseY)
+        isHovered = isHovered && isActive() && isPointVisibleInTree(mouseX, mouseY) && isTopmostAt(mouseX, mouseY)
                 && getChildAt(mouseX, mouseY).isEmpty();
         graphics.pose().pushPose();
         try {
@@ -352,10 +353,69 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
         } finally {
             graphics.pose().popPose();
         }
+        renderChildren(graphics, mouseX, mouseY, partialTick);
+    }
+
+    /** 子树绘制入口；滚动容器可在调用 super 前后设置并恢复裁剪区域。 */
+    protected void renderChildren(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         for (BaseWidget child : List.copyOf(children)) {
             if (child.parent == this) {
-                child.render(graphics, mouseX, mouseY, partialTick);
+                if (!child.isVisibleInTree()) {
+                    child.clearHoverInTree();
+                } else if (child.intersectsAncestorClips()) {
+                    child.render(graphics, mouseX, mouseY, partialTick);
+                } else {
+                    // 普通容器允许后代越界：只跳过离屏自身及其 tooltip，仍检查后代。
+                    child.isHovered = false;
+                    child.layout();
+                    child.renderChildren(graphics, mouseX, mouseY, partialTick);
+                }
             }
+        }
+    }
+
+    /** 子树的屏幕裁剪矩形；null 表示不裁剪。绘制、悬停和命中共用同一区域。 */
+    @Nullable
+    protected ScreenRectangle getChildrenClip() {
+        return null;
+    }
+
+    /** 子控件可接收鼠标输入的区域；普通容器允许子控件越过自身外框。 */
+    protected boolean isPointInsideChildren(double mouseX, double mouseY) {
+        ScreenRectangle clip = getChildrenClip();
+        return clip == null || mouseX >= clip.left() && mouseY >= clip.top()
+                && mouseX < (long) clip.left() + clip.width() && mouseY < (long) clip.top() + clip.height();
+    }
+
+    /** 保证所有祖先容器的裁剪区域同时生效，与绘制时的嵌套 scissor 一致。 */
+    protected final boolean isPointVisibleInTree(double mouseX, double mouseY) {
+        return parent == null || parent.isPointInsideChildren(mouseX, mouseY)
+                && parent.isPointVisibleInTree(mouseX, mouseY);
+    }
+
+    private boolean intersectsAncestorClips() {
+        long left = getX();
+        long top = getY();
+        long right = left + getWidth();
+        long bottom = top + getHeight();
+        boolean clipped = false;
+        for (BaseWidget ancestor = parent; ancestor != null; ancestor = ancestor.parent) {
+            ScreenRectangle clip = ancestor.getChildrenClip();
+            if (clip != null) {
+                clipped = true;
+                left = Math.max(left, clip.left());
+                top = Math.max(top, clip.top());
+                right = Math.min(right, (long) clip.left() + clip.width());
+                bottom = Math.min(bottom, (long) clip.top() + clip.height());
+            }
+        }
+        return !clipped || right > left && bottom > top;
+    }
+
+    private void clearHoverInTree() {
+        isHovered = false;
+        for (BaseWidget child : children) {
+            child.clearHoverInTree();
         }
     }
 
@@ -366,13 +426,14 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
 
     @Override
     public boolean isMouseOver(double mouseX, double mouseY) {
-        return isActive() && (super.isMouseOver(mouseX, mouseY) || getChildAt(mouseX, mouseY).isPresent());
+        return isActive() && isPointVisibleInTree(mouseX, mouseY)
+                && (super.isMouseOver(mouseX, mouseY) || getChildAt(mouseX, mouseY).isPresent());
     }
 
     @Override
     public Optional<GuiEventListener> getChildAt(double mouseX, double mouseY) {
         layout();
-        if (isActive()) {
+        if (isActive() && isPointVisibleInTree(mouseX, mouseY) && isPointInsideChildren(mouseX, mouseY)) {
             for (BaseWidget child : List.copyOf(children).reversed()) {
                 if (child.parent == this && child.isMouseOver(mouseX, mouseY)) {
                     return Optional.of(child);
@@ -397,19 +458,21 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         layout();
-        if (!isActive()) {
+        if (!isActive() || !isPointVisibleInTree(mouseX, mouseY)) {
             return false;
         }
-        for (BaseWidget child : List.copyOf(children).reversed()) {
-            if (child.parent == this && child.isMouseOver(mouseX, mouseY)
-                    && child.mouseClicked(mouseX, mouseY, button)) {
-                // 点击回调可能移除或换绑控件，不能再把焦点交给已离开的子控件。
-                if (child.parent == this && child.isActive()) {
-                    setFocused(child);
-                    pressedWidget = child;
-                    pressedButton = button;
+        if (isPointInsideChildren(mouseX, mouseY)) {
+            for (BaseWidget child : List.copyOf(children).reversed()) {
+                if (child.parent == this && child.isMouseOver(mouseX, mouseY)
+                        && child.mouseClicked(mouseX, mouseY, button)) {
+                    // 点击回调可能移除或换绑控件，不能再把焦点交给已离开的子控件。
+                    if (child.parent == this && child.isActive()) {
+                        setFocused(child);
+                        pressedWidget = child;
+                        pressedButton = button;
+                    }
+                    return true;
                 }
-                return true;
             }
         }
         BaseWidget previousParent = parent;
@@ -518,7 +581,15 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
         // 此处只传递焦点状态，不能丢掉刚建立的子焦点和鼠标捕获。
         if (focusedChild != null) {
             focusedChild.setFocused(focused);
+        } else if (focused) {
+            for (BaseWidget ancestor = parent; ancestor != null; ancestor = ancestor.parent) {
+                ancestor.onDescendantFocused(this);
+            }
         }
+    }
+
+    /** 最终叶焦点应用后通知祖先，滚动容器可据此将嵌套行中的目标滚入视区。 */
+    protected void onDescendantFocused(BaseWidget descendant) {
     }
 
     @Nullable

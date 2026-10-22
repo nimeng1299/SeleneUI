@@ -179,36 +179,36 @@ class StateWidgetTest {
 
         // Invoke the real panel callback without requiring a native sound system.
         left.onClick(0, 0, 0);
-        assertEquals("Left: 1", left.getMessage().getString());
-        assertEquals("Right: 1", right.getMessage().getString());
+        assertEquals("Left: -1", left.getMessage().getString());
+        assertEquals("Right: -1", right.getMessage().getString());
         right.onClick(0, 0, 0);
-        assertEquals("Left: 2", left.getMessage().getString());
-        assertEquals("Right: 2", right.getMessage().getString());
+        assertEquals("Left: 0", left.getMessage().getString());
+        assertEquals("Right: 0", right.getMessage().getString());
 
         screen.resize(Minecraft.getInstance(), 500, 240);
         assertEquals(1, screen.children().size(), "Resize replaces the Screen registration");
         assertSame(root, screen.children().getFirst());
         assertEquals(500, root.getWidth());
-        assertEquals("Left: 2", left.getMessage().getString(), "Resize preserves shared state");
-        assertEquals("Right: 2", right.getMessage().getString());
+        assertEquals("Left: 0", left.getMessage().getString(), "Resize preserves shared state");
+        assertEquals("Right: 0", right.getMessage().getString());
         right.onClick(0, 0, 0);
-        assertEquals("Left: 3", left.getMessage().getString());
-        assertEquals("Right: 3", right.getMessage().getString());
+        assertEquals("Left: 1", left.getMessage().getString());
+        assertEquals("Right: 1", right.getMessage().getString());
 
         screen.removed();
-        left.onClick(0, 0, 0);
         right.onClick(0, 0, 0);
-        assertEquals("Left: 3", left.getMessage().getString(), "Closed screens must release panel bindings");
-        assertEquals("Right: 3", right.getMessage().getString());
+        right.onClick(0, 0, 0);
+        assertEquals("Left: 1", left.getMessage().getString(), "Closed screens must release panel bindings");
+        assertEquals("Right: 1", right.getMessage().getString());
 
         screen.open(320, 180);
         assertEquals(1, screen.children().size());
         assertSame(root, screen.children().getFirst());
-        assertEquals("Left: 5", left.getMessage().getString(), "Reopening binds to the latest model value");
-        assertEquals("Right: 5", right.getMessage().getString());
+        assertEquals("Left: 3", left.getMessage().getString(), "Reopening binds to the latest model value");
+        assertEquals("Right: 3", right.getMessage().getString());
         left.onClick(0, 0, 0);
-        assertEquals("Left: 6", left.getMessage().getString());
-        assertEquals("Right: 6", right.getMessage().getString());
+        assertEquals("Left: 2", left.getMessage().getString());
+        assertEquals("Right: 2", right.getMessage().getString());
         screen.removed();
     }
 
