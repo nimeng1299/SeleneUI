@@ -15,6 +15,7 @@ import neuvillette.selene.layout.Constraint;
 import neuvillette.selene.gallery.GalleryScreen;
 import neuvillette.selene.screen.ListDemoScreen;
 import neuvillette.selene.screen.ScrollViewDemoScreen;
+import neuvillette.selene.screen.SeparatorDemoScreen;
 import neuvillette.selene.screen.StateDemoScreen;
 import neuvillette.selene.screen.TextDemoScreen;
 import neuvillette.selene.widget.Block;
@@ -47,6 +48,10 @@ public class SeleneCommand {
                 }))
                 .then(Commands.literal("text").executes(context -> {
                     Minecraft.getInstance().setScreen(new TextDemoScreen());
+                    return Command.SINGLE_SUCCESS;
+                }))
+                .then(Commands.literal("separator").executes(context -> {
+                    Minecraft.getInstance().setScreen(new SeparatorDemoScreen());
                     return Command.SINGLE_SUCCESS;
                 }));
 
