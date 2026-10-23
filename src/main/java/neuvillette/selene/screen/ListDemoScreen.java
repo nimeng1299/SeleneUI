@@ -10,7 +10,7 @@ import neuvillette.selene.widget.Block;
 import neuvillette.selene.widget.Layout;
 import neuvillette.selene.widget.ScrollList;
 
-/** /selene list：不同高度的可点击列表项，支持滚轮和拖动滚动条。 */
+/** /selene list：不同高度的子控件自动纵向排列，内容溢出后支持滚轮和拖动滚动条。 */
 public class ListDemoScreen extends SeleneScreen {
     public ListDemoScreen() {
         this(new Layout().Padding(16).Spacing(8));
@@ -28,6 +28,7 @@ public class ListDemoScreen extends SeleneScreen {
         header.FillColor(Color.fromRGB(35, 45, 60));
 
         ScrollList list = root.addChild(new ScrollList().Padding(8).Spacing(6).ScrollStep(24), Constraint.fill(1));
+        // 列表自动分配 x/y 和宽度，每项只指定自己的高度，不需要 Constraint。
         for (int i = 0; i < 40; i++) {
             int index = i;
             list.addChild(new TextPanel("Item " + (index + 1)) {

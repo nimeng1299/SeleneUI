@@ -179,6 +179,7 @@ public class Layout extends BaseWidget {
     protected void invalidateLayout() {
         if (!applyingLayout) {
             dirty = true;
+            super.invalidateLayout();
         }
     }
 

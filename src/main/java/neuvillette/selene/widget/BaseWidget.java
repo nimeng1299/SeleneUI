@@ -26,6 +26,7 @@ import neuvillette.selene.state.Subscription;
  * getX/getY 和 setX/setY/setPosition 始终使用屏幕坐标；相对偏移通过
  * getRelativeX/getRelativeY 和 setRelativePosition 访问。屏幕坐标按父链实时计算，
  * 因此父控件移动后，绘制、鼠标命中和焦点矩形会一起移动，无需手动刷新布局。
+ * 滚动容器可独立偏移子控件坐标原点，相对坐标仍表示虚拟内容中的位置。
  * padding 默认为 0，占用控件内部空间，不改变外框大小；修改后子控件保留相对偏移，
  * 自动跟随内容区域移动。右侧和底部 padding 用于计算可用内容尺寸，不自动缩放或裁剪子控件。
  * <p>
@@ -126,8 +127,18 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
     protected void layoutChildren() {
     }
 
-    /** 尺寸、内边距或子控件发生变化时，仅标记布局失效，不立即访问正在构造的子控件。 */
+    /**
+     * 尺寸、内边距或子控件发生变化时，仅标记布局失效，不立即访问正在构造的子控件。
+     * 覆盖时应调用 super，以便测量内容范围的祖先容器收到深层变化通知。
+     */
     protected void invalidateLayout() {
+        for (BaseWidget ancestor = parent; ancestor != null; ancestor = ancestor.parent) {
+            ancestor.onDescendantLayoutChanged(this);
+        }
+    }
+
+    /** 后代布局发生变化；普通控件无需处理，自动测量内容的容器可据此标记失效。 */
+    protected void onDescendantLayoutChanged(BaseWidget descendant) {
     }
 
     protected void onChildRemoved(BaseWidget child) {
@@ -189,9 +200,14 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
         return getX() + paddingLeft;
     }
 
-    /** 内容区域上边界的屏幕坐标，也是子控件的 Y 坐标原点。 */
+    /** 内容视区上边界的屏幕坐标；滚动容器的子控件原点还会叠加滚动偏移。 */
     public int getContentY() {
         return getY() + paddingTop;
+    }
+
+    /** 子控件坐标原点；滚动容器可移动此原点，同时保持自身内容视区边界不变。 */
+    protected int getChildOriginY() {
+        return getContentY();
     }
 
     /** 扣除左右内边距的可用宽度，内边距超过外框尺寸时返回 0。 */
@@ -284,7 +300,7 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
     @Override
     public int getY() {
         ensureParentLayout();
-        return super.getY() + (parent == null ? 0 : parent.getContentY());
+        return super.getY() + (parent == null ? 0 : parent.getChildOriginY());
     }
 
     /** 设置屏幕 X 坐标，同时更新相对于父控件的偏移。 */
@@ -297,7 +313,7 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
     /** 设置屏幕 Y 坐标，同时更新相对于父控件的偏移。 */
     @Override
     public void setY(int y) {
-        super.setY(y - (parent == null ? 0 : parent.getContentY()));
+        super.setY(y - (parent == null ? 0 : parent.getChildOriginY()));
         invalidateParentLayout();
     }
 
