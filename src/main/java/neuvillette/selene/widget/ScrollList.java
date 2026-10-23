@@ -2,6 +2,7 @@ package neuvillette.selene.widget;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 import net.minecraft.network.chat.Component;
 
@@ -90,8 +91,12 @@ public class ScrollList extends ScrollView {
         return this;
     }
 
-    /** 指定初始行高；之后仍可通过 child.setHeight 修改，不形成固定高度约束。 */
-    public <T extends BaseWidget> T addChild(T child, int height) {
+    /**
+     * 指定初始行高；之后仍可通过 child.setHeight 修改，不形成固定高度约束。
+     * 末尾可变参数仅用于消除工厂重载歧义，调用时必须省略。
+     */
+    public <T extends BaseWidget> T addChild(T child, int height, Void... overloadResolution) {
+        requireNoExtraArguments(overloadResolution);
         Objects.requireNonNull(child, "child");
         if (height < 0) {
             throw new IllegalArgumentException("Row height must be nonnegative");
@@ -108,6 +113,18 @@ public class ScrollList extends ScrollView {
         child.setHeight(height);
         child.setRelativePosition(this, relativeX, relativeY);
         return child;
+    }
+
+    /**
+     * 将当前列表传入工厂，再为返回的子控件设置初始行高并加入列表。
+     * 工厂应返回尚未绑定父控件的子控件，使其首次挂载回调可以看到正确的行高。
+     */
+    public <T extends BaseWidget> T addChild(Function<? super ScrollList, ? extends T> factory, int height) {
+        Objects.requireNonNull(factory, "factory");
+        if (height < 0) {
+            throw new IllegalArgumentException("Row height must be nonnegative");
+        }
+        return addChild(factory.apply(this), height);
     }
 
     /** 将直接子控件滚入视区；超高行已部分可见时保持位置，否则显示其顶部。 */

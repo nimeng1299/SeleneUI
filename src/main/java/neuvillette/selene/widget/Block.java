@@ -18,8 +18,8 @@ public class Block extends BaseWidget {
 
     int radius = 0;
     int borderSize = 3;
-    Color borderColor = Color.fromRGB(255, 0, 0);
-    Color fillColor = Color.fromRGB(0, 255, 255);
+    Color borderColor = Color.fromRGB(114, 114, 114);
+    Color fillColor = Color.fromRGB(0, 0, 0);
 
     public Block Padding(int padding) {
         setPadding(padding);

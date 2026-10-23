@@ -345,7 +345,7 @@ class WidgetSubscriptionTest {
         assertEquals(List.of(child), root.children());
         assertNull(root.getParent());
         Probe rejected = new Probe();
-        assertThrows(NullPointerException.class, () -> root.addChild(rejected, null));
+        assertThrows(NullPointerException.class, () -> root.addChild(rejected, (Constraint) null));
         assertNull(rejected.getParent());
         root.addChild(rejected);
         assertEquals(Constraint.fill(1), root.getConstraint(rejected));

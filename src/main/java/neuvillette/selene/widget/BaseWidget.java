@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
@@ -231,11 +232,37 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
         return childrenView;
     }
 
-    /** 加入子控件，将其原有相对偏移用于当前父控件。重复加入不会改变层次顺序。 */
-    public <T extends BaseWidget> T addChild(T child) {
+    /**
+     * 加入子控件，将其原有相对偏移用于当前父控件。重复加入不会改变层次顺序。
+     * 末尾可变参数仅用于消除与工厂 lambda 的泛型重载歧义，调用时必须省略。
+     */
+    public <T extends BaseWidget> T addChild(T child, Void... overloadResolution) {
+        requireNoExtraArguments(overloadResolution);
         Objects.requireNonNull(child, "child");
         child.setRelativePosition(this, child.getRelativeX(), child.getRelativeY());
         return child;
+    }
+
+    /**
+     * 同步调用工厂一次，将当前父控件作为参数，再按普通 addChild 的规则加入并返回结果。
+     * 工厂应返回配置完成、尚未绑定父控件的子控件；加入已挂载的父控件时会立即启用其订阅。
+     * 工厂和返回值都不能为 null；工厂自行产生的副作用不会在抛出异常时回滚。
+     * <pre>{@code
+     * Text label = parent.addChild(self ->
+     *         new Text(0, 0, self.getContentWidth(), 24, "Hello"));
+     * }</pre>
+     */
+    public <T extends BaseWidget> T addChild(Function<? super BaseWidget, ? extends T> factory) {
+        Objects.requireNonNull(factory, "factory");
+        return addChild(factory.apply(this));
+    }
+
+    /** 子类的实例重载沿用相同的解析规则，禁止多余参数被静默忽略。 */
+    protected static void requireNoExtraArguments(Void[] overloadResolution) {
+        Objects.requireNonNull(overloadResolution, "overloadResolution");
+        if (overloadResolution.length != 0) {
+            throw new IllegalArgumentException("The overload-resolution argument must be omitted");
+        }
     }
 
     /** 移除直接子控件并保留其屏幕位置，同时暂停组件订阅并清除相关焦点和鼠标捕获。 */

@@ -14,13 +14,16 @@ public class SeparatorDemoScreen extends SeleneScreen {
 
     private SeparatorDemoScreen(Layout root) {
         super(Component.literal("Separators / 分隔栏"), root, true);
-        root.addChild(new Text(0, 0, 0, 20, "分隔栏 / Separators"), Constraint.length(20));
+        root.addChild(self -> new Text(0, 0, self.getContentWidth(), 20, "分隔栏 / Separators"),
+                Constraint.length(20));
         root.addChild(new Separator(), Constraint.length(1));
 
-        Layout columns = root.addChild(new Layout().Horizontal().Spacing(16).Padding(8, 0),
-                Constraint.fill(1));
-        columns.addChild(new Text(0, 0, 0, 0, "左侧内容 / Left"), Constraint.fill(1));
-        columns.addChild(new Separator().Vertical(), Constraint.length(1));
-        columns.addChild(new Text(0, 0, 0, 0, "右侧内容 / Right"), Constraint.fill(1));
+        root.addChild(self -> {
+            Layout columns = new Layout().Horizontal().Spacing(16).Padding(8, 0);
+            columns.addChild(new Text(0, 0, 0, 0, "左侧内容 / Left"), Constraint.fill(1));
+            columns.addChild(new Separator().Vertical(), Constraint.length(1));
+            columns.addChild(new Text(0, 0, 0, 0, "右侧内容 / Right"), Constraint.fill(1));
+            return columns;
+        }, Constraint.fill(1));
     }
 }

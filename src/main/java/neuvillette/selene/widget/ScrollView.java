@@ -249,7 +249,7 @@ public class ScrollView extends BaseWidget {
             bottom = Math.max(bottom, saturatedAdd(childTop, Math.max(0, child.getHeight())));
             if (child.getChildrenClip() == null) {
                 bottom = Math.max(bottom, measureDescendants(child,
-                        saturatedAdd(childTop, child.getPaddingTop())));
+                        saturatedAdd(childTop, (long) child.getContentY() - child.getY())));
             }
         }
         return bottom;
@@ -504,7 +504,7 @@ public class ScrollView extends BaseWidget {
         return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, coordinate));
     }
 
-    private static long saturatedAdd(long value, int addition) {
+    private static long saturatedAdd(long value, long addition) {
         if (addition > 0 && value > Long.MAX_VALUE - addition) {
             return Long.MAX_VALUE;
         }

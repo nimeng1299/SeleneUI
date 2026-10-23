@@ -4,6 +4,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.GuiGraphics;
@@ -36,6 +37,11 @@ public class Layout extends BaseWidget {
 
     public Layout() {
         this(0, 0, 0, 0);
+    }
+
+    public Layout(@Nullable BaseWidget parent) {
+        this();
+        setParent(parent);
     }
 
     public Layout(int x, int y, int width, int height) {
@@ -122,7 +128,9 @@ public class Layout extends BaseWidget {
         return this;
     }
 
-    public <T extends BaseWidget> T addChild(T child, Constraint constraint) {
+    /** 末尾可变参数仅用于消除工厂重载歧义，调用时必须省略。 */
+    public <T extends BaseWidget> T addChild(T child, Constraint constraint, Void... overloadResolution) {
+        requireNoExtraArguments(overloadResolution);
         Objects.requireNonNull(child, "child");
         Objects.requireNonNull(constraint, "constraint");
         // 已挂载的父控件会在加入时立即激活子控件订阅；先让初始回调看到完整约束。
@@ -137,6 +145,16 @@ public class Layout extends BaseWidget {
             }
         }
         return child;
+    }
+
+    /**
+     * 将当前 Layout 传入工厂，再以指定约束加入返回的子控件。
+     * 工厂应返回尚未绑定父控件的子控件，使其首次挂载回调可以看到正确的约束。
+     */
+    public <T extends BaseWidget> T addChild(Function<? super Layout, ? extends T> factory, Constraint constraint) {
+        Objects.requireNonNull(factory, "factory");
+        Objects.requireNonNull(constraint, "constraint");
+        return addChild(factory.apply(this), constraint);
     }
 
     public Constraint getConstraint(BaseWidget child) {

@@ -8,24 +8,26 @@ import neuvillette.selene.gallery.widget.GalleryListText;
 import neuvillette.selene.layout.Constraint;
 import neuvillette.selene.screen.SeleneScreen;
 import neuvillette.selene.state.State;
-import neuvillette.selene.widget.BaseWidget;
-import neuvillette.selene.widget.Block;
-import neuvillette.selene.widget.Layout;
-import neuvillette.selene.widget.ScrollList;
+import neuvillette.selene.widget.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class GalleryScreen extends SeleneScreen {
-    private final Layout layout = new Layout().Padding(8, 8, 8, 0).Spacing(8).Horizontal();
+    private final Layout layout;
+
+    private final List<String> titles = new ArrayList<>(List.of("按钮", "文本"));
 
     final State<Integer> pageSelected = new State<>(0);
 
 
     public GalleryScreen() {
         super(Component.literal("gallery"), new Block(0, 0, 0, 0, Component.literal("gallery")), true);
-        getRoot()
+        layout = getRoot()
                 .BorderWidth(0)
                 .BorderColor(Color.fromRGBA(0, 0, 0, 0))
                 .FillColor(Color.fromRGBA(220, 220, 220, 100))
-                .addChild(layout);
+                .addChild(parent -> new Layout(parent).Padding(8, 8, 8, 0).Spacing(8).Horizontal());
         DrawNavigation(layout);
         layout.addChild(new Layout() {
             {
@@ -55,9 +57,9 @@ public class GalleryScreen extends SeleneScreen {
         ScrollList list = root.addChild(new ScrollList().Padding(8, 8, 8, 0).Spacing(1).ScrollStep(24),
                 Constraint.length(90));
 
-        for (int i = 0; i < 40; i++) {
+        for (int i = 0; i < titles.size(); i++) {
             int index = i;
-            list.addChild(new GalleryListText("Item " + (index + 1)) {
+            list.addChild(new GalleryListText(titles.get(i)) {
                 {
                     Padding(0, 0, 0, 16 + 8);
                     FillColor(Color.fromRGBA(0, 0, 0, 0));
@@ -76,11 +78,22 @@ public class GalleryScreen extends SeleneScreen {
     /** 在这里将各选项映射到实际页面；页面可以是任意 BaseWidget（如 Block 或 Layout）。 */
     private static BaseWidget createPage(int index) {
         return switch (index) {
-            case 0 -> panel("Page 1", 40, 100, 180);
+            case 0 -> buttonPage();
             case 1 -> panel("Page 2", 45, 120, 85);
             case 2 -> panel("Page 3", 110, 80, 150);
             default -> panel("Page " + (index + 1), 40, 100, 180);
         };
+    }
+
+    private static ScrollList buttonPage(){
+        var view = new ScrollList(0, 0, 0, 0, Component.literal("button_page")).Spacing(4);
+
+        view.addChild(new Text(0, 0, 0, 18, Component.literal("按钮")))
+                .TextScale(1.5f).Align(Text.HorizontalAlignment.LEFT);
+        view.addChild(new Separator().Horizontal());
+        view.addChild(card(0, 0, 0, 40, Component.literal("button1")));
+
+        return view;
     }
 
     private static ScrollList panel(String title, int red, int green, int blue) {
@@ -97,5 +110,13 @@ public class GalleryScreen extends SeleneScreen {
                 }
             }
         };
+    }
+
+    private static Block card(int x, int y, int w, int h, Component component) {
+        return new Block(x, y, w, h, component)
+                .BorderColor(Color.fromRGBA(114, 114, 114, 255))
+                .FillColor(Color.fromRGBA(0, 0, 0, 0))
+                .BorderWidth(1)
+                .Radius(2);
     }
 }

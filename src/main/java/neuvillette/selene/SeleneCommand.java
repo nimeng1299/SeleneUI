@@ -13,6 +13,7 @@ import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import neuvillette.selene.api.Color;
 import neuvillette.selene.layout.Constraint;
 import neuvillette.selene.gallery.GalleryScreen;
+import neuvillette.selene.screen.CardDemoScreen;
 import neuvillette.selene.screen.ListDemoScreen;
 import neuvillette.selene.screen.ScrollViewDemoScreen;
 import neuvillette.selene.screen.SeparatorDemoScreen;
@@ -52,6 +53,10 @@ public class SeleneCommand {
                 }))
                 .then(Commands.literal("separator").executes(context -> {
                     Minecraft.getInstance().setScreen(new SeparatorDemoScreen());
+                    return Command.SINGLE_SUCCESS;
+                }))
+                .then(Commands.literal("card").executes(context -> {
+                    Minecraft.getInstance().setScreen(new CardDemoScreen());
                     return Command.SINGLE_SUCCESS;
                 }));
 
