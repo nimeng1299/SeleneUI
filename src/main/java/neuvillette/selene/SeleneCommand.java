@@ -16,6 +16,7 @@ import neuvillette.selene.gallery.GalleryScreen;
 import neuvillette.selene.screen.ListDemoScreen;
 import neuvillette.selene.screen.ScrollViewDemoScreen;
 import neuvillette.selene.screen.StateDemoScreen;
+import neuvillette.selene.screen.TextDemoScreen;
 import neuvillette.selene.widget.Block;
 import neuvillette.selene.widget.Layout;
 
@@ -42,6 +43,10 @@ public class SeleneCommand {
                 }))
                 .then(Commands.literal("scroll").executes(context -> {
                     Minecraft.getInstance().setScreen(new ScrollViewDemoScreen());
+                    return Command.SINGLE_SUCCESS;
+                }))
+                .then(Commands.literal("text").executes(context -> {
+                    Minecraft.getInstance().setScreen(new TextDemoScreen());
                     return Command.SINGLE_SUCCESS;
                 }));
 

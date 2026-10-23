@@ -2,8 +2,10 @@ package neuvillette.selene.widget;
 
 import javax.annotation.Nullable;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.ComponentPath;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.CommonInputs;
+import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -21,6 +23,14 @@ public abstract class BaseButton extends BaseWidget {
 
     /** 按钮的业务操作；鼠标和键盘入口负责检查可用状态，子类无需处理输入来源。 */
     public abstract void onPress();
+
+    /** 仅有 Text 等不可聚焦子控件时，按钮自身仍可参与键盘导航。 */
+    @Nullable
+    @Override
+    public ComponentPath nextFocusPath(FocusNavigationEvent event) {
+        ComponentPath path = super.nextFocusPath(event);
+        return path != null || !isActive() || isFocused() ? path : ComponentPath.leaf(this);
+    }
 
     @Override
     public void onClick(double mouseX, double mouseY, int button) {
