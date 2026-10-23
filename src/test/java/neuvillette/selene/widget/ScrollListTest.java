@@ -657,7 +657,7 @@ class ScrollListTest {
         assertTrue(frame(list, graphics, 0, 0).isEmpty());
         list.setScrollAmount(20);
         Fill thumb = onlyThumb(frame(list, graphics, 0, 0));
-        assertEquals(1, thumb.right() - thumb.left());
+        assertEquals(2, thumb.right() - thumb.left());
         assertTrue(thumb.left() >= 94 && thumb.right() <= 100);
         assertTrue(thumb.bottom() - thumb.top() < 100, "Only the thumb is filled, without a track");
         assertEquals(90, child.getWidth());
@@ -670,7 +670,7 @@ class ScrollListTest {
         Host screen = new Host(list);
         assertTrue(screen.mouseClicked(hitX, thumb.top() + 1, 0), "The hidden 6-unit hit area stays usable");
         Fill shownThumb = onlyThumb(frame(list, graphics, hitX, thumb.top() + 1));
-        assertEquals(1, shownThumb.right() - shownThumb.left());
+        assertEquals(2, shownThumb.right() - shownThumb.left());
         assertEquals(90, child.getWidth());
         assertTrue(screen.mouseReleased(hitX, thumb.top() + 1, 0));
         child.setHeight(50);

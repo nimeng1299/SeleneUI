@@ -7,17 +7,17 @@ import net.minecraft.network.chat.Component;
 import neuvillette.selene.widget.BaseWidget;
 
 public class SeleneScreen extends Screen {
-    private final BaseWidget widget;
-    private final boolean fitToScreen;
+    protected final BaseWidget root;
+    protected final boolean fitToScreen;
 
-    public SeleneScreen(Component title, BaseWidget widget) {
-        this(title, widget, false);
+    public SeleneScreen(Component title, BaseWidget root) {
+        this(title, root, false);
     }
 
     /** fitToScreen 为 true 时，在打开或窗口尺寸变化时让根控件填满 GUI 区域。 */
-    public SeleneScreen(Component title, BaseWidget widget, boolean fitToScreen) {
+    public SeleneScreen(Component title, BaseWidget root, boolean fitToScreen) {
         super(title);
-        this.widget = Objects.requireNonNull(widget, "widget");
+        this.root = Objects.requireNonNull(root, "widget");
         this.fitToScreen = fitToScreen;
     }
 
@@ -25,16 +25,16 @@ public class SeleneScreen extends Screen {
     protected void init() {
         super.init();
         if (fitToScreen) {
-            widget.setRectangle(width, height, 0, 0);
+            root.setRectangle(width, height, 0, 0);
         }
-        widget.mount();
-        widget.layout();
-        this.addRenderableWidget(widget); // 子控件由父控件绘制和分发事件
+        root.mount();
+        root.layout();
+        this.addRenderableWidget(root); // 子控件由父控件绘制和分发事件
     }
 
     @Override
     public void removed() {
-        widget.unmount();
+        root.unmount();
         super.removed();
     }
 
