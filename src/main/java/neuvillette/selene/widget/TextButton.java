@@ -106,7 +106,7 @@ public class TextButton extends BaseButton {
 
         int contentWidth = getContentWidth();
         int contentHeight = getContentHeight();
-        int textAlpha = Math.round(foreground.Alpha() * 255f / 100f);
+        int textAlpha = foreground.Alpha();
         // Minecraft 会把极低的字色 alpha 当成未指定透明度，必须提前跳过。
         if (contentWidth <= 0 || contentHeight <= 0 || textAlpha < 4) {
             return;
@@ -140,6 +140,6 @@ public class TextButton extends BaseButton {
 
     private static Color tinted(Color color, float brightness, float opacity) {
         return Color.fromRGBA(Math.round(color.Red() * brightness), Math.round(color.Green() * brightness),
-                Math.round(color.Blue() * brightness), Math.round(Math.clamp(color.Alpha(), 0, 100) * opacity));
+                Math.round(color.Blue() * brightness), Math.round(Math.clamp(color.Alpha(), 0, 255) * opacity));
     }
 }

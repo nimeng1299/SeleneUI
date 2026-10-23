@@ -47,10 +47,10 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
     @Nullable
     private BaseWidget pressedWidget;
     private int pressedButton = -1;
-    private int paddingTop;
-    private int paddingRight;
-    private int paddingBottom;
-    private int paddingLeft;
+    private int paddingTop = 0;
+    private int paddingRight = 0;
+    private int paddingBottom = 0;
+    private int paddingLeft = 0;
     private boolean layingOut;
 
     protected BaseWidget(int x, int y, int width, int height, Component message) {

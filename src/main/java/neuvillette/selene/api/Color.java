@@ -4,14 +4,14 @@ public class Color {
     public int r;
     public int g;
     public int b;
-    // 0 - 100
+    /** Alpha 使用 0–255：0 完全透明，255 完全不透明。 */
     public int a;
 
     private Color(int r, int g, int b, int a) {
         this.r = Math.clamp(r, 0, 255);
         this.g = Math.clamp(g, 0, 255);
         this.b = Math.clamp(b, 0, 255);
-        this.a = Math.clamp(a, 0, 100);
+        this.a = Math.clamp(a, 0, 255);
     }
 
     public int Red() {
@@ -30,12 +30,19 @@ public class Color {
         return a;
     }
 
+    public int toARGB() {
+        return ((a & 0xFF) << 24) |
+                ((r & 0xFF) << 16) |
+                ((g & 0xFF) <<  8) |
+                ( b & 0xFF);
+    }
+
     public static Color fromRGBA(int r, int g, int b, int a) {
         return new Color(r, g, b, a);
     }
 
     public static Color fromRGB(int r, int g, int b) {
-        return new Color(r, g, b, 100);
+        return new Color(r, g, b, 255);
     }
 
     public static Color fromARGB(int a, int r, int g, int b) {
@@ -52,7 +59,7 @@ public class Color {
      */
     public static Color fromHSLA(double h, double s, double l, double a) {
         int[] rgb = HslHelper.hslToRgb(h, s, l);
-        int alpha = (int) Math.round(HslHelper.clamp(a, 0, 100));
+        int alpha = (int) Math.round(HslHelper.clamp(a, 0, 100) * 255.0 / 100.0);
         return new Color(rgb[0], rgb[1], rgb[2], alpha);
     }
 

@@ -13,9 +13,11 @@ import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
+import neuvillette.selene.gallery.GalleryScreen;
 import neuvillette.selene.screen.SeleneScreen;
 import neuvillette.selene.widget.BaseWidget;
 import neuvillette.selene.widget.Layout;
+import neuvillette.selene.widget.ScrollList;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -455,6 +457,38 @@ class LayoutWidgetTest {
         assertFalse(screen.mouseClicked(400, 50, 0));
     }
 
+    @Test
+    void galleryContentFillsItsBlockOnOpenAndResize() {
+        HeadlessGalleryScreen screen = new HeadlessGalleryScreen();
+        try {
+            screen.open(320, 180);
+            BaseWidget content = screen.getRoot().children().getFirst();
+            ScrollList navigation = (ScrollList) content.children().getFirst();
+            BaseWidget panel = content.children().get(1);
+            assertBounds(screen.getRoot(), 0, 0, 320, 180);
+            assertBounds(content, 0, 0, 320, 180);
+            assertBounds(navigation, 0, 8, 90, 164);
+            assertBounds(panel, 98, 8, 214, 164);
+            assertEquals(40, navigation.children().size());
+            BaseWidget firstRow = navigation.children().getFirst();
+            assertEquals(0, navigation.getContentX(), "The clip must include the screen's left edge");
+            assertEquals(0, firstRow.getX(), "The selection marker follows the row's left edge");
+            assertEquals(24, firstRow.getContentX(), "Keep the original text indentation");
+
+            screen.resize(Minecraft.getInstance(), 500, 240);
+            assertEquals(List.of(screen.getRoot()), screen.children());
+            assertBounds(content, 0, 0, 500, 240);
+            assertBounds(navigation, 0, 8, 90, 224);
+            assertBounds(panel, 98, 8, 394, 224);
+            navigation.setScrollAmount(8);
+            assertEquals(8, firstRow.getY());
+            assertEquals(0, firstRow.getX());
+            assertEquals(24, firstRow.getContentX());
+        } finally {
+            screen.removed();
+        }
+    }
+
     private static void assertBounds(BaseWidget widget, int x, int y, int width, int height) {
         assertAll(widget.getMessage().getString(),
                 () -> assertEquals(x, widget.getX(), "x"),
@@ -503,6 +537,22 @@ class LayoutWidgetTest {
             super(Component.literal("Fitted screen test"), root, fitToScreen);
         }
 
+        void open(int width, int height) {
+            this.minecraft = Minecraft.getInstance();
+            this.width = width;
+            this.height = height;
+            init();
+        }
+
+        @Override
+        protected void rebuildWidgets() {
+            clearWidgets();
+            clearFocus();
+            init();
+        }
+    }
+
+    private static final class HeadlessGalleryScreen extends GalleryScreen {
         void open(int width, int height) {
             this.minecraft = Minecraft.getInstance();
             this.width = width;

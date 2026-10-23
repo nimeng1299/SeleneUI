@@ -43,7 +43,7 @@ public class Paint {
         int red = color.Red();
         int green = color.Green();
         int blue = color.Blue();
-        int alpha = Math.round(color.Alpha() * 255f / 100f);
+        int alpha = Math.clamp(color.Alpha(), 0, 255);
 
         if (left == right || top == bottom || alpha == 0) {
             return;
@@ -100,7 +100,7 @@ public class Paint {
         int red = color.Red();
         int green = color.Green();
         int blue = color.Blue();
-        int alpha = Math.round(color.Alpha() * 255f / 100f);
+        int alpha = Math.clamp(color.Alpha(), 0, 255);
 
         if (radius <= 0 || sweepAngle == 0 || alpha == 0) {
             return;
@@ -444,9 +444,7 @@ public class Paint {
     }
 
     private static int argb(Color color) {
-        int alpha = Math.round(Math.clamp(color.Alpha(), 0, 100) * 255f / 100f);
-        return (alpha << 24) | (Math.clamp(color.Red(), 0, 255) << 16)
-                | (Math.clamp(color.Green(), 0, 255) << 8) | Math.clamp(color.Blue(), 0, 255);
+        return color.toARGB();
     }
 
     private static void addRectangle(

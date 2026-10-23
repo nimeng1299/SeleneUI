@@ -264,7 +264,7 @@ public class ScrollList extends BaseWidget {
         graphics.flush();
         Paint.drawRoundedRectangle(graphics.pose().last().pose(), bounds, bounds.width() / 2f,
                 Color.fromRGBA((color >>> 16) & 255, (color >>> 8) & 255, color & 255,
-                        Math.round((color >>> 24) * 100f / 255f)));
+                        color >>> 24));
     }
 
     @Override
