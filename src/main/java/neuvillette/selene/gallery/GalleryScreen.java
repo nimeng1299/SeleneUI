@@ -1,11 +1,14 @@
 package neuvillette.selene.gallery;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import neuvillette.selene.api.Color;
 import neuvillette.selene.gallery.widget.GalleryListText;
 import neuvillette.selene.layout.Constraint;
 import neuvillette.selene.screen.SeleneScreen;
 import neuvillette.selene.state.State;
+import neuvillette.selene.widget.BaseWidget;
 import neuvillette.selene.widget.Block;
 import neuvillette.selene.widget.Layout;
 import neuvillette.selene.widget.ScrollList;
@@ -13,7 +16,7 @@ import neuvillette.selene.widget.ScrollList;
 public class GalleryScreen extends SeleneScreen {
     private final Layout layout = new Layout().Padding(8, 8, 8, 0).Spacing(8).Horizontal();
 
-    State<Integer> pageSelected = new State<>(0);
+    final State<Integer> pageSelected = new State<>(0);
 
 
     public GalleryScreen() {
@@ -21,10 +24,18 @@ public class GalleryScreen extends SeleneScreen {
         getRoot()
                 .BorderWidth(0)
                 .BorderColor(Color.fromRGBA(0, 0, 0, 0))
-                .FillColor(Color.fromRGBA(255, 255, 255, 255))
+                .FillColor(Color.fromRGBA(220, 220, 220, 160))
                 .addChild(layout);
         DrawNavigation(layout);
-        layout.addChild(panel("right", 40, 100, 180), Constraint.fill(1));
+        layout.addChild(new Layout() {
+            {
+                // 与左侧高亮共用状态，挂载时也会立即显示初始选中的页面。
+                subscribe(pageSelected, index -> {
+                    clearChildren();
+                    addChild(createPage(index), Constraint.fill(1));
+                });
+            }
+        }, Constraint.fill(1));
     }
 
     @Override
@@ -62,9 +73,30 @@ public class GalleryScreen extends SeleneScreen {
         }
     }
 
+    /** 在这里将各选项映射到实际页面；页面可以是任意 BaseWidget（如 Block 或 Layout）。 */
+    private static BaseWidget createPage(int index) {
+        return switch (index) {
+            case 0 -> panel("Page 1", 40, 100, 180);
+            case 1 -> panel("Page 2", 45, 120, 85);
+            case 2 -> panel("Page 3", 110, 80, 150);
+            default -> panel("Page " + (index + 1), 40, 100, 180);
+        };
+    }
 
     private static Block panel(String title, int red, int green, int blue) {
-        return new Block(0, 0, 0, 0, Component.literal(title))
+        return new Block(0, 0, 0, 0, Component.literal(title)) {
+            @Override
+            protected void renderSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+                super.renderSelf(graphics, mouseX, mouseY, partialTick);
+                graphics.enableScissor(getX(), getY(), getX() + getWidth(), getY() + getHeight());
+                try {
+                    graphics.drawString(Minecraft.getInstance().font, getMessage(),
+                            getX() + 12, getY() + 12, 0xFFFFFFFF, false);
+                } finally {
+                    graphics.disableScissor();
+                }
+            }
+        }
                 .Radius(5)
                 .BorderWidth(1)
                 .BorderColor(Color.fromRGB(180, 200, 220))

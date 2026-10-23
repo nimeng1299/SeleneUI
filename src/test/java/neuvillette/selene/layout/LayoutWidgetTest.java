@@ -14,6 +14,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
 import neuvillette.selene.gallery.GalleryScreen;
+import neuvillette.selene.gallery.widget.GalleryListText;
 import neuvillette.selene.screen.SeleneScreen;
 import neuvillette.selene.widget.BaseWidget;
 import neuvillette.selene.widget.Layout;
@@ -484,6 +485,49 @@ class LayoutWidgetTest {
             assertEquals(8, firstRow.getY());
             assertEquals(0, firstRow.getX());
             assertEquals(24, firstRow.getContentX());
+        } finally {
+            screen.removed();
+        }
+    }
+
+    @Test
+    void gallerySelectionReplacesRightPageAndKeepsItOnResize() {
+        HeadlessGalleryScreen screen = new HeadlessGalleryScreen();
+        try {
+            screen.open(320, 180);
+            BaseWidget content = screen.getRoot().children().getFirst();
+            BaseWidget navigation = content.children().getFirst();
+            BaseWidget pageHost = content.children().get(1);
+            GalleryListText firstItem = (GalleryListText) navigation.children().getFirst();
+            GalleryListText secondItem = (GalleryListText) navigation.children().get(1);
+            BaseWidget firstPage = pageHost.children().getFirst();
+            assertEquals("Page 1", firstPage.getMessage().getString());
+            assertTrue(firstItem.is_click_active);
+            assertFalse(secondItem.is_click_active);
+            assertTrue(firstPage.isMounted());
+            assertBounds(firstPage, 98, 8, 214, 164);
+
+            secondItem.onClick(secondItem.getX(), secondItem.getY(), 0);
+            BaseWidget secondPage = pageHost.children().getFirst();
+            assertEquals(List.of(secondPage), pageHost.children());
+            assertEquals("Page 2", secondPage.getMessage().getString());
+            assertFalse(firstItem.is_click_active);
+            assertTrue(secondItem.is_click_active);
+            assertNull(firstPage.getParent());
+            assertFalse(firstPage.isMounted());
+            assertTrue(secondPage.isMounted());
+            assertBounds(secondPage, 98, 8, 214, 164);
+
+            secondItem.onClick(secondItem.getX(), secondItem.getY(), 0);
+            assertSame(secondPage, pageHost.children().getFirst());
+            screen.resize(Minecraft.getInstance(), 500, 240);
+            assertSame(secondPage, pageHost.children().getFirst());
+            assertBounds(secondPage, 98, 8, 394, 224);
+
+            GalleryListText lastItem = (GalleryListText) navigation.children().getLast();
+            lastItem.onClick(lastItem.getX(), lastItem.getY(), 0);
+            assertEquals("Page 40", pageHost.children().getFirst().getMessage().getString());
+            assertFalse(secondPage.isMounted());
         } finally {
             screen.removed();
         }
