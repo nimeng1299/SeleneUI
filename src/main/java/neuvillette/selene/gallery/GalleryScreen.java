@@ -24,7 +24,7 @@ public class GalleryScreen extends SeleneScreen {
         getRoot()
                 .BorderWidth(0)
                 .BorderColor(Color.fromRGBA(0, 0, 0, 0))
-                .FillColor(Color.fromRGBA(220, 220, 220, 160))
+                .FillColor(Color.fromRGBA(220, 220, 220, 100))
                 .addChild(layout);
         DrawNavigation(layout);
         layout.addChild(new Layout() {
@@ -83,8 +83,8 @@ public class GalleryScreen extends SeleneScreen {
         };
     }
 
-    private static Block panel(String title, int red, int green, int blue) {
-        return new Block(0, 0, 0, 0, Component.literal(title)) {
+    private static ScrollList panel(String title, int red, int green, int blue) {
+        return new ScrollList(0, 0, 0, 0, Component.literal(title)) {
             @Override
             protected void renderSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
                 super.renderSelf(graphics, mouseX, mouseY, partialTick);
@@ -96,10 +96,6 @@ public class GalleryScreen extends SeleneScreen {
                     graphics.disableScissor();
                 }
             }
-        }
-                .Radius(5)
-                .BorderWidth(1)
-                .BorderColor(Color.fromRGB(180, 200, 220))
-                .FillColor(Color.fromRGB(red, green, blue));
+        };
     }
 }
