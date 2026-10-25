@@ -13,6 +13,10 @@ import net.minecraft.network.chat.Component;
  * 鼠标按下或焦点位于按钮自身时按确认键都会调用 onPress，子控件优先处理输入。
  */
 public abstract class BaseButton extends BaseWidget {
+    protected BaseButton(@Nullable BaseWidget parent, Component message) {
+        this(parent, 0, 0, 0, 0, message);
+    }
+
     protected BaseButton(int x, int y, int width, int height, Component message) {
         super(x, y, width, height, message);
     }

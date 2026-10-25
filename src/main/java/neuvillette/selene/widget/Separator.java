@@ -26,6 +26,13 @@ public class Separator extends BaseWidget {
         this(0, 0, 1, 1);
     }
 
+    /** 保留默认的 1×1 外框；message 仅作为元数据，不绘制文字。 */
+    public Separator(@Nullable BaseWidget parent, Component message) {
+        this();
+        setMessage(message);
+        setRelativePosition(parent, 0, 0);
+    }
+
     public Separator(int x, int y, int width, int height) {
         super(x, y, width, height, Component.empty());
     }

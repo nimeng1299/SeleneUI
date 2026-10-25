@@ -91,7 +91,9 @@ public class GalleryScreen extends SeleneScreen {
         view.addChild(new Text(0, 0, 0, 18, Component.literal("按钮")))
                 .TextScale(1.5f).Align(Text.HorizontalAlignment.LEFT);
         view.addChild(new Separator().Horizontal());
-        view.addChild(card(0, 0, 0, 40, Component.literal("button1")));
+
+        Card card1 = view.addChild(card(Component.literal("文字按钮")), 38);
+        card1.addChild(parent -> new TextButton(parent, 0, 0, 50, parent.getContentHeight(), Component.literal("文字按钮")));
 
         return view;
     }
@@ -112,11 +114,12 @@ public class GalleryScreen extends SeleneScreen {
         };
     }
 
-    private static Block card(int x, int y, int w, int h, Component component) {
-        return new Block(x, y, w, h, component)
-                .BorderColor(Color.fromRGBA(114, 114, 114, 255))
+    private static Card card(Component component) {
+        return new Card(component)
                 .FillColor(Color.fromRGBA(0, 0, 0, 0))
+                .BorderColor(Color.fromRGB(114, 114, 114))
                 .BorderWidth(1)
-                .Radius(2);
+                .Radius(3)
+                .Padding(5, 10);
     }
 }

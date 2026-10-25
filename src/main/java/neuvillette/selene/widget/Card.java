@@ -32,6 +32,10 @@ public class Card extends Block {
         this(Component.literal(Objects.requireNonNull(title, "title")));
     }
 
+    public Card(@Nullable BaseWidget parent, Component title) {
+        this(parent, 0, 0, 0, 0, title);
+    }
+
     public Card(int x, int y, int width, int height, Component title) {
         super(x, y, width, height, Objects.requireNonNull(title, "title"));
         setPadding(8);

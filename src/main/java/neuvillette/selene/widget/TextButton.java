@@ -19,6 +19,10 @@ public class TextButton extends BaseButton {
     private Color textColor = Color.fromRGB(72, 85, 103);
     private float textScale = 1f;
 
+    public TextButton(@Nullable BaseWidget parent, Component message) {
+        this(parent, 0, 0, 0, 0, message);
+    }
+
     public TextButton(int x, int y, int width, int height, Component message) {
         this(x, y, width, height, message, NO_ACTION);
     }
@@ -91,7 +95,6 @@ public class TextButton extends BaseButton {
             return;
         }
         boolean enabled = isActive();
-        boolean focused = enabled && isFocused() && getFocused() == null;
         boolean pressed = enabled && isDragging() && getFocused() == null;
         float opacity = Math.clamp(alpha, 0f, 1f) * (enabled ? 1f : 0.5f);
         float brightness = pressed ? 0.9f : isHovered() ? 1.04f : 1f;
@@ -100,9 +103,9 @@ public class TextButton extends BaseButton {
 
         // Paint 立即提交网格，先提交前面的 GUI 绘制以保持图层顺序。
         graphics.flush();
-        Paint.drawBorderedRoundedRectangle(graphics.pose().last().pose(),
+        Paint.drawRoundedRectangle(graphics.pose().last().pose(),
                 Rect.from_xywh(getX(), getY(), width, height), Math.min(width, height) / 2f,
-                background, foreground, focused ? 1f : 0f);
+                background);
 
         int contentWidth = getContentWidth();
         int contentHeight = getContentHeight();

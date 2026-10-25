@@ -30,6 +30,10 @@ public class ScrollList extends ScrollView {
         this(0, 0, 0, 0);
     }
 
+    public ScrollList(@Nullable BaseWidget parent, Component message) {
+        this(parent, 0, 0, 0, 0, message);
+    }
+
     public ScrollList(int x, int y, int width, int height) {
         this(x, y, width, height, Component.empty());
     }

@@ -55,6 +55,11 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
     private int paddingLeft = 0;
     private boolean layingOut;
 
+    /** 相对位置和初始尺寸均为 0，尺寸由布局容器或调用方设置；parent 可为 null。 */
+    protected BaseWidget(@Nullable BaseWidget parent, Component message) {
+        this(parent, 0, 0, 0, 0, message);
+    }
+
     protected BaseWidget(int x, int y, int width, int height, Component message) {
         super(x, y, width, height, message);
     }

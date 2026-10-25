@@ -34,6 +34,10 @@ public class Text extends BaseWidget {
     private HorizontalAlignment alignment = HorizontalAlignment.LEFT;
     private VerticalAlignment verticalAlignment = VerticalAlignment.TOP;
 
+    public Text(@Nullable BaseWidget parent, Component message) {
+        this(parent, 0, 0, 0, 0, message);
+    }
+
     public Text(int x, int y, int width, int height, Component message) {
         super(x, y, width, height, Objects.requireNonNull(message, "message"));
     }

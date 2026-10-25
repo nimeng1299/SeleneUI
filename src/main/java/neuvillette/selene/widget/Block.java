@@ -1,5 +1,6 @@
 package neuvillette.selene.widget;
 
+import javax.annotation.Nullable;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import neuvillette.selene.api.Color;
@@ -7,6 +8,10 @@ import neuvillette.selene.api.Paint;
 import neuvillette.selene.api.Rect;
 
 public class Block extends BaseWidget {
+
+    public Block(@Nullable BaseWidget parent, Component message) {
+        this(parent, 0, 0, 0, 0, message);
+    }
 
     public Block(int x, int y, int width, int height, Component message) {
         super(x, y, width, height, message);

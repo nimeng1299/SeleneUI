@@ -44,6 +44,10 @@ public class Layout extends BaseWidget {
         setParent(parent);
     }
 
+    public Layout(@Nullable BaseWidget parent, Component message) {
+        this(parent, 0, 0, 0, 0, message);
+    }
+
     public Layout(int x, int y, int width, int height) {
         this(x, y, width, height, Component.empty());
     }

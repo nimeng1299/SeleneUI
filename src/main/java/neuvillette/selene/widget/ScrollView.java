@@ -53,6 +53,10 @@ public class ScrollView extends BaseWidget {
         this(0, 0, 0, 0);
     }
 
+    public ScrollView(@Nullable BaseWidget parent, Component message) {
+        this(parent, 0, 0, 0, 0, message);
+    }
+
     public ScrollView(int x, int y, int width, int height) {
         this(x, y, width, height, Component.empty());
     }

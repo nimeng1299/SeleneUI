@@ -1,9 +1,11 @@
 package neuvillette.selene.gallery.widget;
 
+import javax.annotation.Nullable;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import neuvillette.selene.api.Color;
+import neuvillette.selene.widget.BaseWidget;
 import neuvillette.selene.widget.Block;
 
 public class GalleryListText extends Block {
@@ -11,8 +13,13 @@ public class GalleryListText extends Block {
 
 
     public GalleryListText(String text) {
-        super(0, 0, 0, 0, Component.literal(text));
+        this(null, Component.literal(text));
+    }
+
+    public GalleryListText(@Nullable BaseWidget parent, Component message) {
+        super(0, 0, 0, 0, message);
         Radius(2).BorderWidth(0);
+        setRelativePosition(parent, 0, 0);
     }
 
     public GalleryListText SetClick(boolean value) {
