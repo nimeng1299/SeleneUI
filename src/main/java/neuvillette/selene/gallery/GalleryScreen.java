@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import neuvillette.selene.SeleneUI;
 import neuvillette.selene.api.Color;
 import neuvillette.selene.gallery.widget.GalleryListText;
 import neuvillette.selene.layout.Constraint;
@@ -98,8 +99,8 @@ public class GalleryScreen extends SeleneScreen {
 
         Card iconCard = view.addChild(card(Component.literal("带图标文字按钮")), 38);
         iconCard.addChild(parent -> new TextButton(parent, 0, 0, 80, parent.getContentHeight(),
-                Component.literal("fork"))
-                .Icon(ResourceLocation.withDefaultNamespace("textures/block/diamond_block.png")));
+                Component.literal("同意"))
+                .Icon(ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "textures/icon/agree.png")));
 
         return view;
     }
