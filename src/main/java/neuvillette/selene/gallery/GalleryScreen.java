@@ -3,6 +3,7 @@ package neuvillette.selene.gallery;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import neuvillette.selene.api.Color;
 import neuvillette.selene.gallery.widget.GalleryListText;
 import neuvillette.selene.layout.Constraint;
@@ -92,8 +93,13 @@ public class GalleryScreen extends SeleneScreen {
                 .TextScale(1.5f).Align(Text.HorizontalAlignment.LEFT);
         view.addChild(new Separator().Horizontal());
 
-        Card card1 = view.addChild(card(Component.literal("文字按钮")), 38);
-        card1.addChild(parent -> new TextButton(parent, 0, 0, 50, parent.getContentHeight(), Component.literal("文字按钮")));
+        Card textCard = view.addChild(card(Component.literal("文字按钮")), 38);
+        textCard.addChild(parent -> new TextButton(parent, 0, 0, 80, parent.getContentHeight(), Component.literal("文字按钮")));
+
+        Card iconCard = view.addChild(card(Component.literal("带图标文字按钮")), 38);
+        iconCard.addChild(parent -> new TextButton(parent, 0, 0, 80, parent.getContentHeight(),
+                Component.literal("fork"))
+                .Icon(ResourceLocation.withDefaultNamespace("textures/block/diamond_block.png")));
 
         return view;
     }

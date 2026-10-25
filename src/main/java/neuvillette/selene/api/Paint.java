@@ -10,6 +10,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.client.GlStateBackup;
 import org.joml.Matrix4f;
 
@@ -67,6 +68,55 @@ public class Paint {
     /** 使用指定的局部变换绘制实心圆。 */
     public static void drawCircle(Matrix4f pose, float centerX, float centerY, float radius, Color color) {
         drawSector(pose, centerX, centerY, radius, 0, 360, color);
+    }
+
+    /**
+     * 将整张纹理缩放到圆的包围正方形，并用抗锯齿圆形遮罩裁剪。
+     * tint 同时控制颜色与透明度；沿用当前变换和 scissor，结束后恢复纹理绑定。
+     */
+    public static void drawCircularTexture(Matrix4f pose, float centerX, float centerY, float radius,
+                                            ResourceLocation texture, Color tint) {
+        Objects.requireNonNull(pose, "pose");
+        Objects.requireNonNull(texture, "texture");
+        Objects.requireNonNull(tint, "tint");
+        RenderSystem.assertOnRenderThread();
+        if (!Float.isFinite(centerX) || !Float.isFinite(centerY) || !Float.isFinite(radius)) {
+            throw new IllegalArgumentException("Circle center and radius must be finite");
+        }
+        ShaderInstance shader = PaintShaders.circularTexture();
+        if (radius <= 0 || tint.Alpha() <= 0 || shader == null) {
+            return;
+        }
+        var window = Minecraft.getInstance().getWindow();
+        Matrix4f localToClip = new Matrix4f(RenderSystem.getProjectionMatrix())
+                .mul(RenderSystem.getModelViewMatrix()).mul(pose);
+        float[] padding = roundedRectanglePadding(localToClip, centerX, centerY,
+                window.getWidth(), window.getHeight());
+        if (padding == null) {
+            return;
+        }
+        float left = centerX - radius;
+        float top = centerY - radius;
+        float diameter = radius * 2;
+        float padX = padding[0];
+        float padY = padding[1];
+        shader.safeGetUniform("Diameter").set(diameter);
+        setColorUniform(shader, "TintColor", argb(tint));
+        int previousTexture = RenderSystem.getShaderTexture(0);
+        try {
+            draw(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX,
+                    PaintShaders.circularTextureType(texture), buffer -> {
+                        buffer.addVertex(pose, left - padX, top - padY, 0f).setUv(-padX, -padY);
+                        buffer.addVertex(pose, left - padX, top + diameter + padY, 0f)
+                                .setUv(-padX, diameter + padY);
+                        buffer.addVertex(pose, left + diameter + padX, top + diameter + padY, 0f)
+                                .setUv(diameter + padX, diameter + padY);
+                        buffer.addVertex(pose, left + diameter + padX, top - padY, 0f)
+                                .setUv(diameter + padX, -padY);
+                    });
+        } finally {
+            RenderSystem.setShaderTexture(0, previousTexture);
+        }
     }
 
     /**
