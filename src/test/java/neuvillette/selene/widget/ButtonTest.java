@@ -25,7 +25,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import sun.misc.Unsafe;
 
-class TextButtonTest {
+class ButtonTest {
     private static final ResourceLocation ICON = ResourceLocation.withDefaultNamespace("textures/block/diamond_block.png");
     private static Unsafe unsafe;
     private static Field minecraftInstance;
@@ -184,7 +184,7 @@ class TextButtonTest {
     private record Bounds(int left, int top, int right, int bottom) {}
     private record Draw(String text, float x, Bounds clip) {}
 
-    private static final class Probe extends TextButton {
+    private static final class Probe extends Button {
         IconDraw iconDraw;
         Color background;
         float outerRadius;

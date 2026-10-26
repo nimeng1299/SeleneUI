@@ -95,10 +95,10 @@ public class GalleryScreen extends SeleneScreen {
         view.addChild(new Separator().Horizontal());
 
         Card textCard = view.addChild(card(Component.literal("文字按钮")), 38);
-        textCard.addChild(parent -> new TextButton(parent, 0, 0, 80, parent.getContentHeight(), Component.literal("文字按钮")));
+        textCard.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(), Component.literal("文字按钮")));
 
         Card iconCard = view.addChild(card(Component.literal("带图标文字按钮")), 38);
-        iconCard.addChild(parent -> new TextButton(parent, 0, 0, 80, parent.getContentHeight(),
+        iconCard.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(),
                 Component.literal("同意"))
                 .Icon(ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "textures/icon/agree.png")));
 

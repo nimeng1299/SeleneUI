@@ -6,7 +6,7 @@ import neuvillette.selene.layout.Constraint;
 import neuvillette.selene.widget.Layout;
 import neuvillette.selene.widget.ScrollList;
 import neuvillette.selene.widget.Text;
-import neuvillette.selene.widget.TextButton;
+import neuvillette.selene.widget.Button;
 
 /** /selene text：颜色、对齐、换行与动态文本，仅根布局注册到 Screen。 */
 public class TextDemoScreen extends SeleneScreen {
@@ -61,7 +61,7 @@ public class TextDemoScreen extends SeleneScreen {
         Text dynamic = content.addChild(new Text(0, 0, 0, 48, "点击底部按钮更新这段文字。")
                 .TextColor(Color.fromRGB(153, 218, 179))
                 .VerticalAlign(Text.VerticalAlignment.CENTER).Padding(8), 48);
-        root.addChild(new TextButton(0, 0, 0, 30, Component.literal("更新文本 / Update text"))
+        root.addChild(new Button(0, 0, 0, 30, Component.literal("更新文本 / Update text"))
                 .OnPress(() -> {
                     updates++;
                     dynamic.setMessage(Component.literal("动态文本已更新 " + updates

@@ -9,7 +9,7 @@ import neuvillette.selene.widget.Layout;
 import neuvillette.selene.widget.ScrollList;
 import neuvillette.selene.widget.Separator;
 import neuvillette.selene.widget.Text;
-import neuvillette.selene.widget.TextButton;
+import neuvillette.selene.widget.Button;
 
 /** /selene card：边框标题、透明背景与动态标题。 */
 public class CardDemoScreen extends SeleneScreen {
@@ -30,7 +30,7 @@ public class CardDemoScreen extends SeleneScreen {
             body.addChild(new Text(0, 0, 0, 0, "标题嵌在左上边框，内容区域自动避开标题。"),
                     Constraint.fill(1));
             body.addChild(new Separator(), Constraint.length(1));
-            body.addChild(new TextButton(0, 0, 0, 28, Component.literal("更新标题 / Update title"))
+            body.addChild(new Button(0, 0, 0, 28, Component.literal("更新标题 / Update title"))
                     .OnPress(() -> card.Title("标题已更新 " + ++updates + " 次 / Updated")),
                     Constraint.length(28));
             return card;

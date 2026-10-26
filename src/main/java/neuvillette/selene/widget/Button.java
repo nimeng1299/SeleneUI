@@ -15,7 +15,7 @@ import neuvillette.selene.api.Rect;
  * 浅米色胶囊文字按钮，使用游戏字体；点击和键盘操作由 BaseButton 处理。
  * 可选图片图标自动裁成圆形，与左端半圆同心；文字在图标右侧的剩余内容区域居中。
  */
-public class TextButton extends BaseButton {
+public class Button extends BaseButton {
     private static final Runnable NO_ACTION = () -> {};
 
     private Runnable action;
@@ -27,53 +27,53 @@ public class TextButton extends BaseButton {
     private float iconScale = 0.6f;
     private int iconGap = 4;
 
-    public TextButton(@Nullable BaseWidget parent, Component message) {
+    public Button(@Nullable BaseWidget parent, Component message) {
         this(parent, 0, 0, 0, 0, message);
     }
 
-    public TextButton(int x, int y, int width, int height, Component message) {
+    public Button(int x, int y, int width, int height, Component message) {
         this(x, y, width, height, message, NO_ACTION);
     }
 
-    public TextButton(int x, int y, int width, int height, Component message, Runnable action) {
+    public Button(int x, int y, int width, int height, Component message, Runnable action) {
         super(x, y, width, height, message);
         this.action = Objects.requireNonNull(action, "action");
         setPadding(4, 12);
     }
 
-    public TextButton(@Nullable BaseWidget parent, int x, int y, int width, int height, Component message) {
+    public Button(@Nullable BaseWidget parent, int x, int y, int width, int height, Component message) {
         this(parent, x, y, width, height, message, NO_ACTION);
     }
 
-    public TextButton(@Nullable BaseWidget parent, int x, int y, int width, int height,
-                      Component message, Runnable action) {
+    public Button(@Nullable BaseWidget parent, int x, int y, int width, int height,
+                  Component message, Runnable action) {
         this(x, y, width, height, message, action);
         setRelativePosition(parent, x, y);
     }
 
-    public TextButton OnPress(Runnable action) {
+    public Button OnPress(Runnable action) {
         this.action = Objects.requireNonNull(action, "action");
         return this;
     }
 
-    public TextButton FillColor(Color color) {
+    public Button FillColor(Color color) {
         fillColor = Objects.requireNonNull(color, "color");
         return this;
     }
 
-    public TextButton TextColor(Color color) {
+    public Button TextColor(Color color) {
         textColor = Objects.requireNonNull(color, "color");
         return this;
     }
 
     /** 使用整张纹理作为圆形图标，建议提供正方形图片；传入 null 移除图标。 */
-    public TextButton Icon(@Nullable ResourceLocation texture) {
+    public Button Icon(@Nullable ResourceLocation texture) {
         icon = texture;
         return this;
     }
 
     /** 图标直径占按钮短边的比例，默认 0.6，范围为 (0, 1]；改变大小不改变圆心。 */
-    public TextButton IconScale(float scale) {
+    public Button IconScale(float scale) {
         if (!Float.isFinite(scale) || scale <= 0 || scale > 1) {
             throw new IllegalArgumentException("Icon scale must be finite and in (0, 1]");
         }
@@ -82,7 +82,7 @@ public class TextButton extends BaseButton {
     }
 
     /** 图标右边缘与文字可用区域之间的最小间距，单位为 GUI 坐标。 */
-    public TextButton IconGap(int gap) {
+    public Button IconGap(int gap) {
         if (gap < 0) {
             throw new IllegalArgumentException("Icon gap must be nonnegative");
         }
@@ -91,7 +91,7 @@ public class TextButton extends BaseButton {
     }
 
     /** 相对游戏字体的缩放倍数；高度不足时自动缩小到内容区域内。 */
-    public TextButton TextScale(float scale) {
+    public Button TextScale(float scale) {
         if (!Float.isFinite(scale) || scale <= 0) {
             throw new IllegalArgumentException("Text scale must be finite and positive");
         }
@@ -99,17 +99,17 @@ public class TextButton extends BaseButton {
         return this;
     }
 
-    public TextButton Padding(int padding) {
+    public Button Padding(int padding) {
         setPadding(padding);
         return this;
     }
 
-    public TextButton Padding(int vertical, int horizontal) {
+    public Button Padding(int vertical, int horizontal) {
         setPadding(vertical, horizontal);
         return this;
     }
 
-    public TextButton Padding(int top, int right, int bottom, int left) {
+    public Button Padding(int top, int right, int bottom, int left) {
         setPadding(top, right, bottom, left);
         return this;
     }
