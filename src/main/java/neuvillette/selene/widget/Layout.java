@@ -151,6 +151,13 @@ public class Layout extends BaseWidget {
         return child;
     }
 
+    public <T extends BaseWidget> T addChild(T child, Function<? super Layout, Constraint> constraintFactory, Void... overloadResolution) {
+        requireNoExtraArguments(overloadResolution);
+        Objects.requireNonNull(child, "factory");
+        Objects.requireNonNull(constraintFactory, "constraint");
+        return addChild(child, constraintFactory.apply(this));
+    }
+
     /**
      * 将当前 Layout 传入工厂，再以指定约束加入返回的子控件。
      * 工厂应返回尚未绑定父控件的子控件，使其首次挂载回调可以看到正确的约束。
@@ -159,6 +166,12 @@ public class Layout extends BaseWidget {
         Objects.requireNonNull(factory, "factory");
         Objects.requireNonNull(constraint, "constraint");
         return addChild(factory.apply(this), constraint);
+    }
+
+    public <T extends BaseWidget> T addChild(Function<? super Layout, ? extends T> factory, Function<? super Layout, Constraint> constraintFactory) {
+        Objects.requireNonNull(factory, "factory");
+        Objects.requireNonNull(constraintFactory, "constraint");
+        return addChild(factory.apply(this), constraintFactory.apply(this));
     }
 
     public Constraint getConstraint(BaseWidget child) {

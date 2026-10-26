@@ -77,7 +77,7 @@ public class GalleryScreen extends SeleneScreen {
         }
     }
 
-    /** 在这里将各选项映射到实际页面；页面可以是任意 BaseWidget（如 Block 或 Layout）。 */
+    /** 在这里将各选项映射到实际页面*/
     private static BaseWidget createPage(int index) {
         return switch (index) {
             case 0 -> buttonPage();
@@ -97,11 +97,40 @@ public class GalleryScreen extends SeleneScreen {
         Card textCard = view.addChild(card(Component.literal("文字按钮")), 38);
         textCard.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(), Component.literal("文字按钮")));
 
-        Card iconCard = view.addChild(card(Component.literal("带图标文字按钮")), 38);
-        iconCard.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(),
-                Component.literal("同意"))
-                .Icon(ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "textures/icon/agree.png")));
+        Card disabledCard = view.addChild(card(Component.literal("禁用按钮")), 38);
+        disabledCard.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(),
+                Component.literal("不可点击")).Disable(true));
 
+        Card iconCard = view.addChild(card(Component.literal("带图标文字按钮")), 38);
+        Layout iconLayout = iconCard.addChild(parent -> new Layout().Padding(0).Spacing(3).Horizontal());
+        iconLayout.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(),
+                Component.literal("同意"))
+                .Icon(ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "textures/icon/agree.png")), Constraint.length(80));
+        iconLayout.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(),
+                Component.literal("取消"))
+                .Icon(ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "textures/icon/close.png")), Constraint.length(80));
+
+        Card roundCard = view.addChild(card(Component.literal("无文字图标按钮")), 38);
+        Layout roundLayout = roundCard.addChild(new Layout().Horizontal().Spacing(6));
+        roundLayout.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(), Component.empty())
+                .Icon(ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "textures/icon/agree.png")),
+                parent -> Constraint.length(parent.getContentHeight() + 1));
+        roundLayout.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(), Component.empty())
+                        .Icon(ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "textures/icon/close.png")),
+                parent -> Constraint.length(parent.getContentHeight() + 1));
+
+        Card variantCard = view.addChild(card(Component.literal("点按切换图标")), 38);
+        Layout variantLayout = variantCard.addChild(new Layout().Horizontal().Spacing(6));
+        variantLayout.addChild(new IconButton(null, Component.literal("增加"))
+                .Icon(IconButton.Variant.PLUS),
+                parent -> Constraint.length(parent.getContentHeight() + 1));
+        variantLayout.addChild(new IconButton(null, Component.literal("减少"))
+                .Icon(IconButton.Variant.MINUS),
+                parent -> Constraint.length(parent.getContentHeight() + 1));
+
+        Card disabledIconCard = view.addChild(card(Component.literal("禁用图标按钮")), 38);
+        disabledIconCard.addChild(parent -> new IconButton(parent, 0, 0, 0, parent.getContentHeight(),
+                Component.literal("不可增加")).Icon(IconButton.Variant.PLUS).Disable(true));
         return view;
     }
 
@@ -122,7 +151,25 @@ public class GalleryScreen extends SeleneScreen {
     }
 
     private static Card card(Component component) {
-        return new Card(component)
+        return new Card(component) {
+            @Override
+            protected void layoutChildren() {
+                super.layoutChildren();
+                // Gallery 中的内层 Layout 填满卡片内容区，并随卡片尺寸变化重新布局。
+                int width = getContentWidth();
+                int height = getContentHeight();
+                for (BaseWidget child : children()) {
+                    if (child instanceof Layout) {
+                        if (child.getRelativeX() != 0 || child.getRelativeY() != 0) {
+                            child.setRelativePosition(0, 0);
+                        }
+                        if (child.getWidth() != width || child.getHeight() != height) {
+                            child.setSize(width, height);
+                        }
+                    }
+                }
+            }
+        }
                 .FillColor(Color.fromRGBA(0, 0, 0, 0))
                 .BorderColor(Color.fromRGB(114, 114, 114))
                 .BorderWidth(1)

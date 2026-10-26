@@ -76,12 +76,23 @@ public class Paint {
      */
     public static void drawCircularTexture(Matrix4f pose, float centerX, float centerY, float radius,
                                             ResourceLocation texture, Color tint) {
+        drawCircularTexture(pose, centerX, centerY, radius, texture, tint, 0, 0, 1, 1);
+    }
+
+    /** 只取指定的归一化 UV 区域，区域外的相邻帧不会进入圆形遮罩。 */
+    public static void drawCircularTexture(Matrix4f pose, float centerX, float centerY, float radius,
+                                            ResourceLocation texture, Color tint,
+                                            float u0, float v0, float u1, float v1) {
         Objects.requireNonNull(pose, "pose");
         Objects.requireNonNull(texture, "texture");
         Objects.requireNonNull(tint, "tint");
         RenderSystem.assertOnRenderThread();
         if (!Float.isFinite(centerX) || !Float.isFinite(centerY) || !Float.isFinite(radius)) {
             throw new IllegalArgumentException("Circle center and radius must be finite");
+        }
+        if (!Float.isFinite(u0) || !Float.isFinite(v0) || !Float.isFinite(u1) || !Float.isFinite(v1)
+                || u0 < 0 || v0 < 0 || u1 > 1 || v1 > 1 || u0 >= u1 || v0 >= v1) {
+            throw new IllegalArgumentException("UV bounds must describe a nonempty region within [0, 1]");
         }
         ShaderInstance shader = PaintShaders.circularTexture();
         if (radius <= 0 || tint.Alpha() <= 0 || shader == null) {
@@ -101,6 +112,7 @@ public class Paint {
         float padX = padding[0];
         float padY = padding[1];
         shader.safeGetUniform("Diameter").set(diameter);
+        shader.safeGetUniform("UvBounds").set(u0, v0, u1, v1);
         setColorUniform(shader, "TintColor", argb(tint));
         int previousTexture = RenderSystem.getShaderTexture(0);
         try {

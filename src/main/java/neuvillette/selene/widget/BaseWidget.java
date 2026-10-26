@@ -588,7 +588,12 @@ public abstract class BaseWidget extends AbstractWidget implements ContainerEven
 
     @Override
     public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
-        return isActive() && isFocused() && ContainerEventHandler.super.keyReleased(keyCode, scanCode, modifiers);
+        if (!isActive()) {
+            // 隐藏/禁用期间仍要结束焦点链上的按压，避免恢复显示后遗留键盘按下样式。
+            clearInteraction();
+            return false;
+        }
+        return isFocused() && ContainerEventHandler.super.keyReleased(keyCode, scanCode, modifiers);
     }
 
     @Override

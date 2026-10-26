@@ -19,6 +19,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import neuvillette.selene.api.Color;
 import neuvillette.selene.api.Rect;
+import neuvillette.selene.gallery.GalleryScreen;
 import org.joml.Vector4f;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -54,6 +55,46 @@ class CardTest {
     @AfterAll
     static void restoreMinecraft() throws Exception {
         if (minecraftInstance != null) minecraftInstance.set(null, previousMinecraft);
+    }
+
+    @Test
+    void galleryIconButtonsGetBoundsFromTheirCardAndFollowResize() {
+        GalleryScreen screen = new GalleryScreen();
+        BaseWidget root = screen.getRoot();
+        BaseWidget content = root.children().getFirst();
+        try {
+            // Screen 首次挂载时，页面可能先于外层布局得到最终尺寸。
+            root.mount();
+            root.setSize(320, 180);
+            content.setSize(320, 180);
+            BaseWidget page = content.children().get(1).children().getFirst();
+            Card iconCard = (Card) page.children().stream()
+                    .filter(child -> child.getMessage().getString().equals("带图标文字按钮"))
+                    .findFirst().orElseThrow();
+            BaseWidget row = iconCard.children().getFirst();
+            BaseWidget agree = row.children().getFirst();
+            BaseWidget cancel = row.children().get(1);
+
+            for (int width : new int[] {320, 500}) {
+                root.setSize(width, 180);
+                content.setSize(width, 180);
+                assertEquals(80, agree.getWidth());
+                assertEquals(80, cancel.getWidth());
+                assertEquals(iconCard.getContentHeight(), agree.getHeight());
+                assertEquals(agree.getHeight(), cancel.getHeight());
+                assertTrue(agree.getHeight() > 0);
+                assertEquals(iconCard.getContentX(), agree.getX());
+                assertEquals(iconCard.getContentY(), agree.getY());
+                assertEquals(agree.getX() + agree.getWidth() + 3, cancel.getX());
+                assertEquals(agree.getY(), cancel.getY());
+                assertEquals(iconCard.getContentWidth(), row.getWidth());
+                assertTrue(cancel.getX() + cancel.getWidth() <= iconCard.getContentX() + iconCard.getContentWidth());
+            }
+            BaseWidget textButton = page.children().get(2).children().getFirst();
+            assertEquals(80, textButton.getWidth());
+        } finally {
+            root.unmount();
+        }
     }
 
     @Test
