@@ -98,6 +98,40 @@ class CardTest {
     }
 
     @Test
+    void galleryCardPageTextFillsEachCardAndFollowsResize() {
+        GalleryScreen screen = new GalleryScreen();
+        BaseWidget root = screen.getRoot();
+        BaseWidget content = root.children().getFirst();
+        try {
+            root.mount();
+            root.setSize(320, 180);
+            content.setSize(320, 180);
+            BaseWidget cardOption = content.children().getFirst().children().get(1);
+            cardOption.onClick(cardOption.getX(), cardOption.getY(), 0);
+            BaseWidget page = content.children().get(1).children().getFirst();
+            List<Card> cards = page.children().stream().filter(Card.class::isInstance)
+                    .map(Card.class::cast).limit(3).toList();
+            assertEquals(3, cards.size());
+
+            for (int width : new int[] {320, 500}) {
+                root.setSize(width, 180);
+                content.setSize(width, 180);
+                for (Card card : cards) {
+                    Text body = assertInstanceOf(Text.class, card.children().getFirst());
+                    assertTrue(body.getWidth() > 0, "Card body text needs a drawable width");
+                    assertTrue(body.getHeight() > 0, "Card body text needs a drawable height");
+                    assertEquals(card.getContentX(), body.getX());
+                    assertEquals(card.getContentY(), body.getY());
+                    assertEquals(card.getContentWidth(), body.getWidth());
+                    assertEquals(card.getContentHeight(), body.getHeight());
+                }
+            }
+        } finally {
+            root.unmount();
+        }
+    }
+
+    @Test
     void titleAndPaddingOffsetDescendantsWithoutChangingTheOuterBounds() {
         Card card = new Card(10, 20, 100, 80, "Heading").Padding(2, 3, 4, 5);
         Probe child = new Probe(card, 3, 7, 10, 11);

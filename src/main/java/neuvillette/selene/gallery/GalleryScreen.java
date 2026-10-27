@@ -132,7 +132,17 @@ public class GalleryScreen extends SeleneScreen {
     private static ScrollList cardPage(){
         ScrollList view = page_head(Component.literal("card_page"), new Text("卡片"));
 
-        Card infoCard = view.addChild(card(new Text("物品信息卡")), 100);
+        view.addChild(card(new Text("实色卡片 / Card")).FillColor(Color.fromRGB(114, 114, 114)).BorderColor(Color.fromRGB(0, 0, 0)), 50)
+                .addChild(parent -> new Text(parent, Component.literal("标题嵌在左上边框，内容区域自动避开标题。")));
+
+        view.addChild(card(new Text("透明卡片")), 50)
+                .addChild(parent -> new Text(parent, Component.literal("背景保持透明，标题两侧的边框仍然可见。\nThe game remains visible behind this card.")));
+
+        view.addChild(card(new Text("一个很长的卡片标题：超过边框可用宽度时截断 / "
+                        + "A deliberately long card title that stays inside its border even in a narrow window")), 50)
+                .addChild(parent -> new Text(parent, Component.literal("调整窗口宽度，观察长标题的裁剪。\nResize the window to see the title stay within its border.")));
+
+        Card infoCard = view.addChild(card(new Text("物品信息卡 / InfoCard")), 100);
         Layout infoLayout = infoCard.addChild(new Layout().Horizontal().Spacing(6));
         infoLayout.addChild(parent -> new InfoCard(parent, 0, 0, 60, parent.getContentHeight(), new Text("下界合金剑"))
                 .Background(InfoCard.BackgroundPreset.GOLD)
@@ -173,11 +183,11 @@ public class GalleryScreen extends SeleneScreen {
             @Override
             protected void layoutChildren() {
                 super.layoutChildren();
-                // Gallery 中的内层 Layout 填满卡片内容区，并随卡片尺寸变化重新布局。
+                // Gallery 中的 Layout 和正文 Text 填满卡片内容区，并随卡片尺寸变化重新布局。
                 int width = getContentWidth();
                 int height = getContentHeight();
                 for (BaseWidget child : children()) {
-                    if (child instanceof Layout) {
+                    if (child instanceof Layout || child instanceof Text) {
                         if (child.getRelativeX() != 0 || child.getRelativeY() != 0) {
                             child.setRelativePosition(0, 0);
                         }
