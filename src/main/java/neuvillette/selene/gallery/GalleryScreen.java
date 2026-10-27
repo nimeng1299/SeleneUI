@@ -18,7 +18,7 @@ import java.util.List;
 public class GalleryScreen extends SeleneScreen {
     private final Layout layout;
 
-    private final List<String> titles = new ArrayList<>(List.of("按钮", "文本"));
+    private final List<String> titles = new ArrayList<>(List.of("Button", "Card"));
 
     final State<Integer> pageSelected = new State<>(0);
 
@@ -81,18 +81,14 @@ public class GalleryScreen extends SeleneScreen {
     private static BaseWidget createPage(int index) {
         return switch (index) {
             case 0 -> buttonPage();
-            case 1 -> panel("Page 2", 45, 120, 85);
+            case 1 -> cardPage();
             case 2 -> panel("Page 3", 110, 80, 150);
             default -> panel("Page " + (index + 1), 40, 100, 180);
         };
     }
 
     private static ScrollList buttonPage(){
-        var view = new ScrollList(0, 0, 0, 0, Component.literal("button_page")).Spacing(4);
-
-        view.addChild(new Text(0, 0, 0, 18, Component.literal("按钮")))
-                .TextScale(1.5f).Align(Text.HorizontalAlignment.LEFT);
-        view.addChild(new Separator().Horizontal());
+        ScrollList view = page_head(Component.literal("button_page"), Component.literal("按钮"));
 
         Card textCard = view.addChild(card(Component.literal("文字按钮")), 38);
         textCard.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(), Component.literal("文字按钮")));
@@ -134,6 +130,12 @@ public class GalleryScreen extends SeleneScreen {
         return view;
     }
 
+    private static ScrollList cardPage(){
+        ScrollList view = page_head(Component.literal("button_page"), Component.literal("按钮"));
+
+        return view;
+    }
+
     private static ScrollList panel(String title, int red, int green, int blue) {
         return new ScrollList(0, 0, 0, 0, Component.literal(title)) {
             @Override
@@ -148,6 +150,17 @@ public class GalleryScreen extends SeleneScreen {
                 }
             }
         };
+    }
+
+    private static ScrollList page_head(Component page_id, Component title){
+        var view = new ScrollList(0, 0, 0, 0, page_id).Spacing(4);
+
+        view.addChild(new Text(0, 0, 0, 18, title))
+                .TextScale(1.5f).Align(Text.HorizontalAlignment.LEFT);
+        view.addChild(new Separator().Horizontal());
+
+        return view;
+
     }
 
     private static Card card(Component component) {
