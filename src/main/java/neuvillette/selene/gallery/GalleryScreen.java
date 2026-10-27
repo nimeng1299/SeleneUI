@@ -131,8 +131,13 @@ public class GalleryScreen extends SeleneScreen {
     }
 
     private static ScrollList cardPage(){
-        ScrollList view = page_head(Component.literal("button_page"), Component.literal("按钮"));
+        ScrollList view = page_head(Component.literal("card_page"), Component.literal("卡片"));
 
+        Card infoCard = view.addChild(card(Component.literal("物品信息卡")), 100);
+        Layout infoLayout = infoCard.addChild(new Layout().Horizontal().Spacing(6));
+        infoLayout.addChild(parent -> new InfoCard(parent, 0, 0, 60, parent.getContentHeight(), Component.literal("下界合金剑"))
+                .Image(ResourceLocation.withDefaultNamespace("textures/item/netherite_sword.png"))
+                .ImageScale(0.85f).Radius(4).FooterRadius(12).FooterHeight(20), Constraint.length(60));
         return view;
     }
 

@@ -20,6 +20,7 @@ import java.util.function.Function;
 public final class PaintShaders {
     private static ShaderInstance roundedRectangle;
     private static ShaderInstance circularTexture;
+    private static ShaderInstance infoCard;
     private static final RenderType ROUNDED_RECTANGLE = RenderType.create(
             "selene_rounded_rectangle", DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS, 256,
             RenderType.CompositeState.builder()
@@ -40,6 +41,21 @@ public final class PaintShaders {
                             .setCullState(RenderStateShard.NO_CULL)
                             .createCompositeState(false)));
 
+    private record CardTextures(ResourceLocation image, ResourceLocation background) {}
+
+    private static final Function<CardTextures, RenderType> INFO_CARD = Util.memoize(textures ->
+            RenderType.create("selene_info_card", DefaultVertexFormat.POSITION_TEX,
+                    VertexFormat.Mode.QUADS, 256,
+                    RenderType.CompositeState.builder()
+                            .setShaderState(new RenderStateShard.ShaderStateShard(PaintShaders::infoCard))
+                            .setTextureState(RenderStateShard.MultiTextureStateShard.builder()
+                                    .add(textures.image(), false, false)
+                                    .add(textures.background(), false, false).build())
+                            .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                            .setDepthTestState(RenderStateShard.LEQUAL_DEPTH_TEST)
+                            .setCullState(RenderStateShard.NO_CULL)
+                            .createCompositeState(false)));
+
     private PaintShaders() {}
 
     @SubscribeEvent
@@ -54,6 +70,11 @@ public final class PaintShaders {
                 ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "circular_texture"),
                 DefaultVertexFormat.POSITION_TEX
         ), shader -> circularTexture = shader);
+        event.registerShader(new ShaderInstance(
+                event.getResourceProvider(),
+                ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "info_card"),
+                DefaultVertexFormat.POSITION_TEX
+        ), shader -> infoCard = shader);
     }
 
     static ShaderInstance roundedRectangle() {
@@ -70,5 +91,13 @@ public final class PaintShaders {
 
     static RenderType circularTextureType(ResourceLocation texture) {
         return CIRCULAR_TEXTURE.apply(texture);
+    }
+
+    static ShaderInstance infoCard() {
+        return infoCard;
+    }
+
+    static RenderType infoCardType(ResourceLocation image, ResourceLocation background) {
+        return INFO_CARD.apply(new CardTextures(image, background));
     }
 }

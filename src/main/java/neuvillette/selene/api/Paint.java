@@ -10,6 +10,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.client.GlStateBackup;
 import org.joml.Matrix4f;
@@ -17,8 +18,100 @@ import org.joml.Matrix4f;
 import java.util.Objects;
 import java.util.TreeSet;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
 public class Paint {
+    /** InfoCard 的渐变端点及底部信息栏颜色，alpha 均使用 0–255。 */
+    public record InfoCardColors(Color top, Color bottom, Color footer) {
+        public InfoCardColors {
+            Objects.requireNonNull(top, "top");
+            Objects.requireNonNull(bottom, "bottom");
+            Objects.requireNonNull(footer, "footer");
+        }
+    }
+
+    /**
+     * 一次提交卡片背景、可选背景纹理、等比例居中的图片及信息栏。
+     * 所有图层先合成，再统一应用 opacity 和圆角覆盖率，避免半透明圆角重复混色。
+     * 颗粒使用局部坐标，背景纹理铺满上方区域，图片缩放超出的部分在此区域裁剪。
+     */
+    public static void drawInfoCard(Matrix4f pose, Rect rect, float radius, int footerHeight,
+                                    InfoCardColors colors, float grain,
+                                    @Nullable ResourceLocation image, float imageScale,
+                                    @Nullable ResourceLocation backgroundTexture, float opacity) {
+        Objects.requireNonNull(rect, "rect");
+        float footerRadius = Math.clamp(radius, 0f,
+                Math.min(Math.abs((float) rect.width()), Math.abs((float) rect.height())) / 2f);
+        drawInfoCard(pose, rect, radius, footerHeight, footerRadius, colors, grain,
+                image, imageScale, backgroundTexture, opacity);
+    }
+
+    /** footerRadius 独立控制信息栏右上角的圆弧，0 为直角，自动限制在图片区域内。 */
+    public static void drawInfoCard(Matrix4f pose, Rect rect, float radius, int footerHeight, float footerRadius,
+                                    InfoCardColors colors, float grain,
+                                    @Nullable ResourceLocation image, float imageScale,
+                                    @Nullable ResourceLocation backgroundTexture, float opacity) {
+        Objects.requireNonNull(pose, "pose");
+        Objects.requireNonNull(rect, "rect");
+        Objects.requireNonNull(colors, "colors");
+        if (!Float.isFinite(radius) || footerHeight < 0
+                || !Float.isFinite(footerRadius) || footerRadius < 0
+                || !Float.isFinite(grain) || grain < 0 || grain > 1
+                || !Float.isFinite(imageScale) || imageScale <= 0 || !Float.isFinite(opacity)) {
+            throw new IllegalArgumentException("Invalid card radius, footer height/radius, grain, scale or opacity");
+        }
+        RenderSystem.assertOnRenderThread();
+        float left = Math.min(rect.x(), rect.x2());
+        float top = Math.min(rect.y(), rect.y2());
+        float right = Math.max(rect.x(), rect.x2());
+        float bottom = Math.max(rect.y(), rect.y2());
+        float width = right - left;
+        float height = bottom - top;
+        ShaderInstance shader = PaintShaders.infoCard();
+        if (width <= 0 || height <= 0 || opacity <= 0 || shader == null) return;
+
+        var window = Minecraft.getInstance().getWindow();
+        Matrix4f localToClip = new Matrix4f(RenderSystem.getProjectionMatrix())
+                .mul(RenderSystem.getModelViewMatrix()).mul(pose);
+        float[] padding = roundedRectanglePadding(localToClip, left + width / 2, top + height / 2,
+                window.getWidth(), window.getHeight());
+        if (padding == null) return;
+
+        shader.safeGetUniform("RectSize").set(width, height);
+        shader.safeGetUniform("Radius").set(Math.clamp(radius, 0f, Math.min(width, height) / 2));
+        shader.safeGetUniform("FooterHeight").set(Math.min((float) footerHeight, height));
+        shader.safeGetUniform("FooterRadius").set(Math.clamp(footerRadius, 0f,
+                Math.min(width, Math.max(0f, height - footerHeight))));
+        shader.safeGetUniform("Grain").set(grain);
+        shader.safeGetUniform("ImageScale").set(imageScale);
+        shader.safeGetUniform("HasImage").set(image == null ? 0f : 1f);
+        shader.safeGetUniform("HasBackground").set(backgroundTexture == null ? 0f : 1f);
+        shader.safeGetUniform("Opacity").set(Math.clamp(opacity, 0f, 1f));
+        setColorUniform(shader, "TopColor", argb(colors.top()));
+        setColorUniform(shader, "BottomColor", argb(colors.bottom()));
+        setColorUniform(shader, "FooterColor", argb(colors.footer()));
+
+        // 即使没有图片也绑定有效纹理；分支关闭采样时不会显示 missingno。
+        ResourceLocation imageTexture = image == null ? MissingTextureAtlasSprite.getLocation() : image;
+        ResourceLocation background = backgroundTexture == null ? MissingTextureAtlasSprite.getLocation() : backgroundTexture;
+        int previousImage = RenderSystem.getShaderTexture(0);
+        int previousBackground = RenderSystem.getShaderTexture(1);
+        float padX = padding[0];
+        float padY = padding[1];
+        try {
+            draw(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX,
+                    PaintShaders.infoCardType(imageTexture, background), buffer -> {
+                        buffer.addVertex(pose, left - padX, top - padY, 0f).setUv(-padX, -padY);
+                        buffer.addVertex(pose, left - padX, bottom + padY, 0f).setUv(-padX, height + padY);
+                        buffer.addVertex(pose, right + padX, bottom + padY, 0f).setUv(width + padX, height + padY);
+                        buffer.addVertex(pose, right + padX, top - padY, 0f).setUv(width + padX, -padY);
+                    });
+        } finally {
+            RenderSystem.setShaderTexture(0, previousImage);
+            RenderSystem.setShaderTexture(1, previousBackground);
+        }
+    }
+
     /**
      * 在客户端渲染线程中，使用当前 GUI 投影绘制实心矩形。
      * 坐标使用 GUI 缩放后的单位，不附加局部平移或缩放。
