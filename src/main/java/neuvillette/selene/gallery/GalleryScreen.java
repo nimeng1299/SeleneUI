@@ -77,11 +77,10 @@ public class GalleryScreen extends SeleneScreen {
     }
 
     /** 在这里将各选项映射到实际页面*/
-    private static BaseWidget createPage(int index) {
-        return switch (index) {
-            case 0 -> buttonPage();
-            case 1 -> cardPage();
-            case 2 -> panel("Page 3", 110, 80, 150);
+    private BaseWidget createPage(int index) {
+        return switch (titles.get(index)) {
+            case "Button" -> buttonPage();
+            case "Card" -> cardPage();
             default -> panel("Page " + (index + 1), 40, 100, 180);
         };
     }
