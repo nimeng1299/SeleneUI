@@ -142,7 +142,7 @@ public class GalleryScreen extends SeleneScreen {
                         + "A deliberately long card title that stays inside its border even in a narrow window")), 50)
                 .addChild(parent -> new Text(parent, Component.literal("调整窗口宽度，观察长标题的裁剪。\nResize the window to see the title stay within its border.")));
 
-        Card infoCard = view.addChild(card(new Text("物品信息卡 / InfoCard")), 100);
+        Card infoCard = view.addChild(card(new Text("信息卡 / InfoCard")), 100);
         Layout infoLayout = infoCard.addChild(new Layout().Horizontal().Spacing(6));
         infoLayout.addChild(parent -> new InfoCard(parent, 0, 0, 60, parent.getContentHeight(), new Text("下界合金剑"))
                 .Background(InfoCard.BackgroundPreset.GOLD)
@@ -152,6 +152,24 @@ public class GalleryScreen extends SeleneScreen {
                 .Background(InfoCard.BackgroundPreset.PURPLE)
                 .Image(ResourceLocation.withDefaultNamespace("textures/item/diamond_sword.png"))
                 .ImageScale(0.85f).Radius(4).FooterRadius(12).FooterHeight(20), Constraint.length(60));
+
+        Card detailCard = view.addChild(card(new Text("详情卡 / DetailCard")), 220);
+        Layout detailLayout = detailCard.addChild(new Layout().Horizontal());
+        DetailCard detail = detailLayout.addChild(parent -> new DetailCard(parent, 0, 0, 170, parent.getContentHeight(), new Text("假的天空之翼").TextScale(1.15f))
+                .HeaderHeight(24).BodyHeight(70)
+                .Image(ResourceLocation.withDefaultNamespace("textures/item/bow.png"))
+                .ImageScale(0.75f), Constraint.length(170));
+        detail.getHeader().Padding(6, 10);
+        detail.getBody().Padding(6, 8).Spacing(0);
+        detail.getBody().addChild(new Text("弓").TextScale(0.8f), Constraint.length(12));
+        detail.getBody().addChild(new Text("暴击率").TextScale(0.8f).TextColor(Color.fromRGB(204, 194, 173)), Constraint.length(10));
+        detail.getBody().addChild(new Text("99.9%").TextScale(0.8f), Constraint.length(12));
+        detail.getBody().addChild(new Text("基础攻击力").TextScale(0.8f).TextColor(Color.fromRGB(204, 194, 173)), Constraint.length(10));
+        detail.getBody().addChild(new Text("924").TextScale(1.2f), Constraint.length(20));
+        detail.getFooter().addChild(new Text("· 攻击力+99\n· 暴击率+99.9%\n· 元素精通+60\n· 暴击伤害+150.2%")
+                .TextScale(0.8f).LineSpacing(3), Constraint.length(48));
+        detail.getFooter().addChild(new Text("象征风龙身为风之神眷属的大弓。释弦时的鸣声是风之神的偏爱，蕴含苍空与长风的力量")
+                .TextColor(Color.fromRGB(123, 129, 134)).TextScale(0.8f).LineSpacing(3), Constraint.fill(1));
         return view;
     }
 
