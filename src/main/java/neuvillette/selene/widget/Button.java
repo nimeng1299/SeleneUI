@@ -2,16 +2,14 @@ package neuvillette.selene.widget;
 
 import java.util.Objects;
 import javax.annotation.Nullable;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
-import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FormattedCharSequence;
 import neuvillette.selene.api.Color;
 import neuvillette.selene.api.Paint;
 import neuvillette.selene.api.Rect;
+import neuvillette.selene.state.Subscription;
 
 /**
  * 浅米色胶囊文字按钮，使用游戏字体；点击和键盘操作由 BaseButton 处理。
@@ -21,39 +19,41 @@ import neuvillette.selene.api.Rect;
  */
 public class Button extends BaseButton {
     private static final Runnable NO_ACTION = () -> {};
+    private static final Color DEFAULT_TEXT_COLOR = Color.fromRGB(72, 85, 103);
 
     private Runnable action;
+    private Text text;
+    private Subscription textChanges;
     private int textWidth;
     private Color fillColor = Color.fromRGB(237, 229, 216);
-    private Color textColor = Color.fromRGB(72, 85, 103);
-    private float textScale = 1f;
     @Nullable
     private ResourceLocation icon;
     private float iconScale = 0.6f;
     private int iconGap = 4;
 
-    public Button(@Nullable BaseWidget parent, Component message) {
-        this(parent, 0, 0, 0, 0, message);
+    public Button(@Nullable BaseWidget parent, Text text) {
+        this(parent, 0, 0, 0, 0, text);
     }
 
-    public Button(int x, int y, int width, int height, Component message) {
-        this(x, y, width, height, message, NO_ACTION);
+    public Button(int x, int y, int width, int height, Text text) {
+        this(x, y, width, height, text, NO_ACTION);
     }
 
-    public Button(int x, int y, int width, int height, Component message, Runnable action) {
-        super(x, y, width, height, Objects.requireNonNull(message, "message"));
+    public Button(int x, int y, int width, int height, Text text, Runnable action) {
+        super(x, y, width, height, Objects.requireNonNull(text, "text").getMessage());
         this.action = Objects.requireNonNull(action, "action");
-        setWidth(width);
+        this.textWidth = width;
+        setText(text);
         setPadding(4, 12);
     }
 
-    public Button(@Nullable BaseWidget parent, int x, int y, int width, int height, Component message) {
-        this(parent, x, y, width, height, message, NO_ACTION);
+    public Button(@Nullable BaseWidget parent, int x, int y, int width, int height, Text text) {
+        this(parent, x, y, width, height, text, NO_ACTION);
     }
 
     public Button(@Nullable BaseWidget parent, int x, int y, int width, int height,
-                  Component message, Runnable action) {
-        this(x, y, width, height, message, action);
+                  Text text, Runnable action) {
+        this(x, y, width, height, text, action);
         setRelativePosition(parent, x, y);
     }
 
@@ -63,7 +63,32 @@ public class Button extends BaseButton {
 
     @Override
     public void setMessage(Component message) {
-        super.setMessage(Objects.requireNonNull(message, "message"));
+        text.setMessage(message);
+    }
+
+    @Override
+    public Component getMessage() {
+        return text == null ? super.getMessage() : text.getMessage();
+    }
+
+    public Text getText() {
+        return text;
+    }
+
+    public void setText(Text text) {
+        Objects.requireNonNull(text, "text");
+        if (textChanges != null) textChanges.unsubscribe();
+        this.text = text;
+        textChanges = text.onChange(this::updateTextWidth);
+        updateTextWidth();
+    }
+
+    public Button Text(Text text) {
+        setText(text);
+        return this;
+    }
+
+    private void updateTextWidth() {
         super.setWidth(isCircular() ? Math.max(0, height) : textWidth);
     }
 
@@ -136,7 +161,7 @@ public class Button extends BaseButton {
     }
 
     public Button TextColor(Color color) {
-        textColor = Objects.requireNonNull(color, "color");
+        text.TextColor(color);
         return this;
     }
 
@@ -166,10 +191,7 @@ public class Button extends BaseButton {
 
     /** 相对游戏字体的缩放倍数；高度不足时自动缩小到内容区域内。 */
     public Button TextScale(float scale) {
-        if (!Float.isFinite(scale) || scale <= 0) {
-            throw new IllegalArgumentException("Text scale must be finite and positive");
-        }
-        textScale = scale;
+        text.TextScale(scale);
         return this;
     }
 
@@ -214,7 +236,7 @@ public class Button extends BaseButton {
         float opacity = Math.clamp(alpha, 0f, 1f);
         float brightness = pressed ? 0.9f : enabled && isHovered() ? 1.04f : 1f;
         Color background = enabled ? tinted(fillColor, brightness, opacity) : Color.fromRGBA(0, 0, 0, 0);
-        Color foreground = tinted(enabled ? textColor : fillColor, 1f, opacity);
+        Color foreground = tinted(enabled ? text.textColorOr(DEFAULT_TEXT_COLOR) : fillColor, 1f, opacity);
 
         // Paint 立即提交网格，先提交前面的 GUI 绘制以保持图层顺序。
         graphics.flush();
@@ -238,42 +260,11 @@ public class Button extends BaseButton {
         }
         float contentWidth = Math.max(0, contentRight - contentLeft);
         int contentHeight = getContentHeight();
-        int textAlpha = foreground.Alpha();
-        // Minecraft 会把极低的字色 alpha 当成未指定透明度，必须提前跳过。
-        if (contentWidth <= 0 || contentHeight <= 0 || textAlpha < 4) {
-            return;
-        }
-        var font = Minecraft.getInstance().font;
-        float scale = Math.min(textScale, (float) contentHeight / font.lineHeight);
-        int maxTextWidth = (int) Math.floor(contentWidth / (double) scale);
-        if (maxTextWidth <= 0) {
-            return;
-        }
-        FormattedCharSequence text = Language.getInstance().getVisualOrder(font.substrByWidth(getMessage(), maxTextWidth));
-        if (!enabled) {
-            // 覆盖绘制序列中的颜色，保留粗体等样式，也不修改原始 Component。
-            FormattedCharSequence original = text;
-            int disabledColor = foreground.toARGB() & 0xFFFFFF;
-            text = sink -> original.accept((index, style, codePoint) ->
-                    sink.accept(index, style.withColor(disabledColor), codePoint));
-        }
-        float textX = contentLeft + (contentWidth - font.width(text) * scale) / 2f;
-        float textY = getContentY() + (contentHeight - font.lineHeight * scale) / 2f;
-        int packedColor = textAlpha << 24 | foreground.Red() << 16 | foreground.Green() << 8 | foreground.Blue();
-
-        graphics.enableScissor((int) Math.ceil(contentLeft), getContentY(),
-                (int) contentRight, getContentY() + contentHeight);
-        try {
-            graphics.pose().pushPose();
-            try {
-                graphics.pose().translate(textX, textY, 0);
-                graphics.pose().scale(scale, scale, 1f);
-                graphics.drawString(font, text, 0, 0, packedColor, false);
-            } finally {
-                graphics.pose().popPose();
-            }
-        } finally {
-            graphics.disableScissor();
+        Text.SingleLine line = text.singleLine(contentWidth, contentHeight, true, false);
+        if (line != null) {
+            text.renderLine(graphics, line, contentLeft, getContentY(), contentWidth, contentHeight,
+                    opacity, enabled ? DEFAULT_TEXT_COLOR : fillColor,
+                    Text.HorizontalAlignment.CENTER, Text.VerticalAlignment.CENTER, !enabled);
         }
     }
 

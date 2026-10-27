@@ -1,6 +1,5 @@
 package neuvillette.selene.screen;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import neuvillette.selene.api.Color;
@@ -9,6 +8,7 @@ import neuvillette.selene.state.State;
 import neuvillette.selene.widget.Block;
 import neuvillette.selene.widget.Layout;
 import neuvillette.selene.widget.ScrollList;
+import neuvillette.selene.widget.Text;
 
 /** /selene list：不同高度的子控件自动纵向排列，内容溢出后支持滚轮和拖动滚动条。 */
 public class ListDemoScreen extends SeleneScreen {
@@ -46,16 +46,32 @@ public class ListDemoScreen extends SeleneScreen {
     }
 
     private static class TextPanel extends Block {
+        private final Text text;
+
         TextPanel(String text) {
-            super(0, 0, 0, 0, Component.literal(text));
+            this(new Text(text).Padding(0, 8).VerticalAlign(Text.VerticalAlignment.CENTER).Shadow(true));
+        }
+
+        TextPanel(Text text) {
+            super(0, 0, 0, 0, text.getMessage());
+            this.text = text;
             Radius(4).BorderWidth(1).BorderColor(Color.fromRGB(110, 140, 170));
+        }
+
+        @Override
+        public void setMessage(Component message) {
+            text.setMessage(message);
+        }
+
+        @Override
+        public Component getMessage() {
+            return text == null ? super.getMessage() : text.getMessage();
         }
 
         @Override
         protected void renderSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             super.renderSelf(graphics, mouseX, mouseY, partialTick);
-            graphics.drawString(Minecraft.getInstance().font, getMessage(),
-                    getX() + 8, getY() + (getHeight() - 9) / 2, 0xFFFFFFFF);
+            text.renderIn(graphics, getX(), getY(), getWidth(), getHeight(), alpha);
         }
     }
 }

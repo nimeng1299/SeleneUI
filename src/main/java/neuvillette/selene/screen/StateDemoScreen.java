@@ -1,12 +1,12 @@
 package neuvillette.selene.screen;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import neuvillette.selene.api.Color;
 import neuvillette.selene.state.State;
 import neuvillette.selene.widget.Block;
 import neuvillette.selene.widget.Layout;
+import neuvillette.selene.widget.Text;
 
 /** 跨组件数据同步 */
 public class StateDemoScreen extends SeleneScreen {
@@ -24,6 +24,8 @@ public class StateDemoScreen extends SeleneScreen {
 
     private static final class CounterPanel extends Block {
         private final State<Integer> count;
+        private final Text label = new Text("").Align(Text.HorizontalAlignment.CENTER).Shadow(true);
+        private final Text hint = new Text("Click either panel: ±1").Align(Text.HorizontalAlignment.CENTER).Shadow(true);
 
         private final boolean is_add;
 
@@ -32,7 +34,17 @@ public class StateDemoScreen extends SeleneScreen {
             this.count = count;
             this.is_add = is_add;
             Radius(5).BorderWidth(1).BorderColor(Color.fromRGB(180, 200, 220)).FillColor(color);
-            subscribe(count, value -> setMessage(Component.literal(labelName + ": " + value)));
+            subscribe(count, value -> label.setMessage(Component.literal(labelName + ": " + value)));
+        }
+
+        @Override
+        public Component getMessage() {
+            return label == null ? super.getMessage() : label.getMessage();
+        }
+
+        @Override
+        public void setMessage(Component message) {
+            label.setMessage(message);
         }
 
         @Override
@@ -50,11 +62,9 @@ public class StateDemoScreen extends SeleneScreen {
         @Override
         protected void renderSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             super.renderSelf(graphics, mouseX, mouseY, partialTick);
-            var font = Minecraft.getInstance().font;
-            int centerX = getX() + getWidth() / 2;
             int centerY = getY() + getHeight() / 2;
-            graphics.drawCenteredString(font, getMessage(), centerX, centerY - 10, 0xFFFFFFFF);
-            graphics.drawCenteredString(font, "Click either panel: ±1", centerX, centerY + 3, 0xFFFFFFFF);
+            label.renderIn(graphics, getX(), centerY - 10, getWidth(), 9, alpha);
+            hint.renderIn(graphics, getX(), centerY + 3, getWidth(), 9, alpha);
         }
     }
 }

@@ -119,7 +119,7 @@ class CardTest {
         assertEquals(43, child.getY());
         assertEquals(47, leaf.getY());
 
-        card.Title(Component.empty());
+        card.Title(Text.FromComponent(Component.empty()));
         assertEquals(0, card.getTitleHeight());
         assertEquals(22, card.getContentY());
         assertEquals(74, card.getContentHeight());
@@ -134,24 +134,25 @@ class CardTest {
         ScrollView view = new ScrollView(0, 0, 100, 30);
         Probe container = new Probe(view, 0, 5, 90, 10);
         container.setPadding(2, 0, 0, 0);
-        Card card = new Card(container, 0, 3, 80, 10, Component.literal("Heading")).Padding(4, 0, 0, 0);
+        Text title = new Text("Heading");
+        Card card = new Card(container, 0, 3, 80, 10, title).Padding(4, 0, 0, 0);
         Probe leaf = new Probe(card, 0, 20, 10, 10);
 
         assertEquals(53, view.getScrollHeight());
         assertEquals(23, view.getMaxScroll());
-        card.TitleScale(2);
+        title.TextScale(2);
         assertEquals(62, view.getScrollHeight());
         assertEquals(32, view.getMaxScroll());
         view.ensureVisible(leaf);
         assertEquals(32, view.getScrollAmount());
         assertEquals(20, leaf.getY());
 
-        card.Title("");
+        title.setMessage(Component.empty());
         assertEquals(44, view.getScrollHeight());
         assertEquals(14, view.getMaxScroll());
         assertEquals(14, view.getScrollAmount());
         assertEquals(20, leaf.getY());
-        card.Title("Restored");
+        title.setMessage(Component.literal("Restored"));
         assertEquals(62, view.getScrollHeight());
         assertEquals(32, view.getMaxScroll());
     }

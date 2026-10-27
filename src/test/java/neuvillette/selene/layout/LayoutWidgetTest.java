@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ComponentPath;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
 import net.minecraft.client.gui.screens.Screen;
@@ -38,7 +39,13 @@ class LayoutWidgetTest {
         minecraftInstance = Minecraft.class.getDeclaredField("instance");
         minecraftInstance.setAccessible(true);
         previousMinecraft = minecraftInstance.get(null);
-        minecraftInstance.set(null, unsafe.allocateInstance(Minecraft.class));
+        Minecraft minecraft = (Minecraft) unsafe.allocateInstance(Minecraft.class);
+        Field font = Minecraft.class.getDeclaredField("font");
+        font.setAccessible(true);
+        font.set(minecraft, new Font(ignored -> {
+            throw new AssertionError("Layout tests only need the font line height");
+        }, false));
+        minecraftInstance.set(null, minecraft);
     }
 
     @AfterAll
@@ -470,7 +477,7 @@ class LayoutWidgetTest {
             assertBounds(content, 0, 0, 320, 180);
             assertBounds(navigation, 0, 8, 90, 164);
             assertBounds(panel, 98, 8, 214, 164);
-            assertEquals(40, navigation.children().size());
+            assertEquals(2, navigation.children().size());
             BaseWidget firstRow = navigation.children().getFirst();
             assertEquals(0, navigation.getContentX(), "The clip must include the screen's left edge");
             assertEquals(0, firstRow.getX(), "The selection marker follows the row's left edge");
@@ -482,7 +489,7 @@ class LayoutWidgetTest {
             assertBounds(navigation, 0, 8, 90, 224);
             assertBounds(panel, 98, 8, 394, 224);
             navigation.setScrollAmount(8);
-            assertEquals(8, firstRow.getY());
+            assertEquals(16, firstRow.getY());
             assertEquals(0, firstRow.getX());
             assertEquals(24, firstRow.getContentX());
         } finally {
@@ -501,7 +508,7 @@ class LayoutWidgetTest {
             GalleryListText firstItem = (GalleryListText) navigation.children().getFirst();
             GalleryListText secondItem = (GalleryListText) navigation.children().get(1);
             BaseWidget firstPage = pageHost.children().getFirst();
-            assertEquals("Page 1", firstPage.getMessage().getString());
+            assertEquals("button_page", firstPage.getMessage().getString());
             assertTrue(firstItem.is_click_active);
             assertFalse(secondItem.is_click_active);
             assertTrue(firstPage.isMounted());
@@ -510,7 +517,7 @@ class LayoutWidgetTest {
             secondItem.onClick(secondItem.getX(), secondItem.getY(), 0);
             BaseWidget secondPage = pageHost.children().getFirst();
             assertEquals(List.of(secondPage), pageHost.children());
-            assertEquals("Page 2", secondPage.getMessage().getString());
+            assertEquals("card_page", secondPage.getMessage().getString());
             assertFalse(firstItem.is_click_active);
             assertTrue(secondItem.is_click_active);
             assertNull(firstPage.getParent());
@@ -524,9 +531,8 @@ class LayoutWidgetTest {
             assertSame(secondPage, pageHost.children().getFirst());
             assertBounds(secondPage, 98, 8, 394, 224);
 
-            GalleryListText lastItem = (GalleryListText) navigation.children().getLast();
-            lastItem.onClick(lastItem.getX(), lastItem.getY(), 0);
-            assertEquals("Page 40", pageHost.children().getFirst().getMessage().getString());
+            firstItem.onClick(firstItem.getX(), firstItem.getY(), 0);
+            assertEquals("button_page", pageHost.children().getFirst().getMessage().getString());
             assertFalse(secondPage.isMounted());
         } finally {
             screen.removed();

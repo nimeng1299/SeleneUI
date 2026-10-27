@@ -1,5 +1,6 @@
 package neuvillette.selene.screen;
 
+import neuvillette.selene.widget.Text;
 import net.minecraft.network.chat.Component;
 import neuvillette.selene.layout.Constraint;
 import neuvillette.selene.widget.Layout;
@@ -15,7 +16,7 @@ public class ScrollViewDemoScreen extends SeleneScreen {
     private ScrollViewDemoScreen(Layout root) {
         super(Component.literal("Scroll view demo"), root, true);
         Button top = root.addChild(new Button(0, 0, 0, 28,
-                Component.literal("Scroll view - click to return to top")), Constraint.length(28));
+                new Text("Scroll view - click to return to top")), Constraint.length(28));
         ScrollView view = root.addChild(new ScrollView().Padding(8).ScrollStep(24), Constraint.fill(1));
         top.OnPress(() -> view.setScrollAmount(0));
 
@@ -23,7 +24,7 @@ public class ScrollViewDemoScreen extends SeleneScreen {
         for (int i = 0; i < 12; i++) {
             int index = i + 1;
             Button button = view.addChild(new Button(12 + (i % 2) * 48, 24 + i * 80,
-                    140, 32, Component.literal("Item " + index)));
+                    140, 32, new Text("Item " + index)));
             button.OnPress(() -> button.setMessage(Component.literal("Selected " + index)));
         }
     }

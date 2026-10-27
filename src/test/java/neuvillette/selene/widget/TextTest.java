@@ -24,6 +24,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import neuvillette.selene.api.Color;
+import neuvillette.selene.api.Paint;
 import neuvillette.selene.api.Rect;
 import org.joml.Vector4f;
 import org.junit.jupiter.api.AfterAll;
@@ -129,7 +130,10 @@ class TextTest {
         Component message = Component.empty()
                 .append(Component.literal("A").withStyle(ChatFormatting.BOLD))
                 .append(Component.literal("B").withStyle(ChatFormatting.RED));
-        Text text = new Text(0, 0, 100, 30, message).TextColor(Color.fromRGBA(20, 40, 60, 128)).Shadow(true);
+        Text text = Text.FromComponent(message).TextColor(Color.fromRGBA(20, 40, 60, 128)).Shadow(true);
+        text.setSize(100, 30);
+        assertSame(message, text.getMessage());
+        assertThrows(NullPointerException.class, () -> Text.FromComponent(null));
         RecordingGraphics graphics = graphics();
         text.render(graphics, 0, 0, 0);
         Draw draw = graphics.draws.getFirst();
@@ -174,6 +178,39 @@ class TextTest {
         assertEquals(11f, graphics.pose().last().pose().m31());
         assertEquals(1f, graphics.pose().last().pose().m00());
         assertEquals(1f, graphics.pose().last().pose().m11());
+    }
+
+    @Test
+    void visibleLabelsUseTheSuppliedTextStyleWithoutChangingItsGeometryOrParent() {
+        Text label = new Text(99, 101, 30, 40, "AB").Padding(2, 3).TextScale(2)
+                .TextColor(Color.fromRGBA(40, 68, 96, 128)).Shadow(true)
+                .Align(Text.HorizontalAlignment.RIGHT).VerticalAlign(Text.VerticalAlignment.BOTTOM);
+        label.setAlpha(0.5f);
+        List<BaseWidget> widgets = List.of(new LabelButton(label), new LabelCard(label), new LabelInfoCard(label));
+
+        for (BaseWidget widget : widgets) {
+            widget.setAlpha(0.5f);
+            RecordingGraphics graphics = graphics();
+            widget.render(graphics, -1, -1, 0);
+
+            assertEquals(1, graphics.draws.size());
+            Draw draw = graphics.draws.getFirst();
+            assertEquals("AB", draw.text());
+            assertEquals(0x20284460, draw.color());
+            assertTrue(draw.shadow());
+            assertEquals(2f, draw.scaleX());
+            assertEquals(2f, draw.scaleY());
+            assertEquals(draw.clip().right(), draw.x() + 24, 0.0001f);
+            assertEquals(draw.clip().bottom(), draw.y() + 18, 0.0001f);
+            assertSame(label.getMessage(), widget.getMessage());
+            assertEquals(99, label.getX());
+            assertEquals(101, label.getY());
+            assertEquals(30, label.getWidth());
+            assertEquals(40, label.getHeight());
+            assertNull(label.getParent());
+            assertTrue(widget.children().isEmpty());
+            assertNull(graphics.currentClip());
+        }
     }
 
     @Test
@@ -333,6 +370,22 @@ class TextTest {
         @Override protected void renderScrollbarThumb(GuiGraphics graphics, Rect bounds, int color) {}
     }
 
+    private static final class LabelButton extends Button {
+        LabelButton(Text text) { super(10, 20, 140, 60, text); Padding(0); }
+        @Override protected void renderBackground(GuiGraphics graphics, Rect bounds, float radius, Color color) {}
+    }
+
+    private static final class LabelCard extends Card {
+        LabelCard(Text text) { super(10, 20, 140, 60, text); }
+        @Override protected void renderCardFrame(GuiGraphics graphics, Rect bounds, Color fill, Color border, float width) {}
+    }
+
+    private static final class LabelInfoCard extends InfoCard {
+        LabelInfoCard(Text text) { super(10, 20, 140, 60, text); }
+        @Override protected void renderCard(GuiGraphics graphics, Rect bounds, float radius, int footer,
+                                            Paint.InfoCardColors colors, float opacity) {}
+    }
+
     private record Bounds(int left, int top, int right, int bottom) {
         Bounds intersection(Bounds other) {
             int x = Math.max(left, other.left);
@@ -357,6 +410,8 @@ class TextTest {
 
         RecordingGraphics() { super(Minecraft.getInstance(), null); }
         Bounds currentClip() { return clips.isEmpty() ? null : clips.getLast(); }
+
+        @Override public void flush() {}
 
         @Override
         public void enableScissor(int left, int top, int right, int bottom) {

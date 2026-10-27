@@ -18,8 +18,8 @@ import net.minecraft.network.chat.Component;
  *         .Padding(8)
  *         .Spacing(6)
  *         .ScrollStep(24);
- * list.addChild(new TextButton(0, 0, 0, 32, Component.literal("First")));
- * list.addChild(new TextButton(0, 0, 0, 48, Component.literal("Second")));
+ * list.addChild(new Button(0, 0, 0, 32, new Text("First")));
+ * list.addChild(new Button(0, 0, 0, 48, new Text("Second")));
  * // 也可以在添加时指定行高：list.addChild(widget, 40)。
  * }</pre>
  */

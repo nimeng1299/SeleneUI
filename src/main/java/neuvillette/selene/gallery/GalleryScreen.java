@@ -1,6 +1,5 @@
 package neuvillette.selene.gallery;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -88,34 +87,34 @@ public class GalleryScreen extends SeleneScreen {
     }
 
     private static ScrollList buttonPage(){
-        ScrollList view = page_head(Component.literal("button_page"), Component.literal("按钮"));
+        ScrollList view = page_head(Component.literal("button_page"), new Text("按钮"));
 
-        Card textCard = view.addChild(card(Component.literal("文字按钮")), 38);
-        textCard.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(), Component.literal("文字按钮")));
+        Card textCard = view.addChild(card(new Text("文字按钮")), 38);
+        textCard.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(), new Text("文字按钮")));
 
-        Card disabledCard = view.addChild(card(Component.literal("禁用按钮")), 38);
+        Card disabledCard = view.addChild(card(new Text("禁用按钮")), 38);
         disabledCard.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(),
-                Component.literal("不可点击")).Disable(true));
+                new Text("不可点击")).Disable(true));
 
-        Card iconCard = view.addChild(card(Component.literal("带图标文字按钮")), 38);
+        Card iconCard = view.addChild(card(new Text("带图标文字按钮")), 38);
         Layout iconLayout = iconCard.addChild(parent -> new Layout().Padding(0).Spacing(3).Horizontal());
         iconLayout.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(),
-                Component.literal("同意"))
+                new Text("同意"))
                 .Icon(ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "textures/icon/agree.png")), Constraint.length(80));
         iconLayout.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(),
-                Component.literal("取消"))
+                new Text("取消"))
                 .Icon(ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "textures/icon/close.png")), Constraint.length(80));
 
-        Card roundCard = view.addChild(card(Component.literal("无文字图标按钮")), 38);
+        Card roundCard = view.addChild(card(new Text("无文字图标按钮")), 38);
         Layout roundLayout = roundCard.addChild(new Layout().Horizontal().Spacing(6));
-        roundLayout.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(), Component.empty())
+        roundLayout.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(), new Text(""))
                 .Icon(ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "textures/icon/agree.png")),
                 parent -> Constraint.length(parent.getContentHeight() + 1));
-        roundLayout.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(), Component.empty())
+        roundLayout.addChild(parent -> new Button(parent, 0, 0, 80, parent.getContentHeight(), new Text(""))
                         .Icon(ResourceLocation.fromNamespaceAndPath(SeleneUI.MODID, "textures/icon/close.png")),
                 parent -> Constraint.length(parent.getContentHeight() + 1));
 
-        Card variantCard = view.addChild(card(Component.literal("点按切换图标")), 38);
+        Card variantCard = view.addChild(card(new Text("点按切换图标")), 38);
         Layout variantLayout = variantCard.addChild(new Layout().Horizontal().Spacing(6));
         variantLayout.addChild(new IconButton(null, Component.literal("增加"))
                 .Icon(IconButton.Variant.PLUS),
@@ -124,43 +123,44 @@ public class GalleryScreen extends SeleneScreen {
                 .Icon(IconButton.Variant.MINUS),
                 parent -> Constraint.length(parent.getContentHeight() + 1));
 
-        Card disabledIconCard = view.addChild(card(Component.literal("禁用图标按钮")), 38);
+        Card disabledIconCard = view.addChild(card(new Text("禁用图标按钮")), 38);
         disabledIconCard.addChild(parent -> new IconButton(parent, 0, 0, 0, parent.getContentHeight(),
                 Component.literal("不可增加")).Icon(IconButton.Variant.PLUS).Disable(true));
         return view;
     }
 
     private static ScrollList cardPage(){
-        ScrollList view = page_head(Component.literal("card_page"), Component.literal("卡片"));
+        ScrollList view = page_head(Component.literal("card_page"), new Text("卡片"));
 
-        Card infoCard = view.addChild(card(Component.literal("物品信息卡")), 100);
+        Card infoCard = view.addChild(card(new Text("物品信息卡")), 100);
         Layout infoLayout = infoCard.addChild(new Layout().Horizontal().Spacing(6));
-        infoLayout.addChild(parent -> new InfoCard(parent, 0, 0, 60, parent.getContentHeight(), Component.literal("下界合金剑"))
+        infoLayout.addChild(parent -> new InfoCard(parent, 0, 0, 60, parent.getContentHeight(), new Text("下界合金剑"))
+                .Background(InfoCard.BackgroundPreset.GOLD)
                 .Image(ResourceLocation.withDefaultNamespace("textures/item/netherite_sword.png"))
+                .ImageScale(0.85f).Radius(4).FooterRadius(12).FooterHeight(20), Constraint.length(60));
+        infoLayout.addChild(parent -> new InfoCard(parent, 0, 0, 60, parent.getContentHeight(), new Text("钻石剑"))
+                .Background(InfoCard.BackgroundPreset.PURPLE)
+                .Image(ResourceLocation.withDefaultNamespace("textures/item/diamond_sword.png"))
                 .ImageScale(0.85f).Radius(4).FooterRadius(12).FooterHeight(20), Constraint.length(60));
         return view;
     }
 
     private static ScrollList panel(String title, int red, int green, int blue) {
+        Text label = new Text(title).Padding(12);
         return new ScrollList(0, 0, 0, 0, Component.literal(title)) {
             @Override
             protected void renderSelf(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
                 super.renderSelf(graphics, mouseX, mouseY, partialTick);
-                graphics.enableScissor(getX(), getY(), getX() + getWidth(), getY() + getHeight());
-                try {
-                    graphics.drawString(Minecraft.getInstance().font, getMessage(),
-                            getX() + 12, getY() + 12, 0xFFFFFFFF, false);
-                } finally {
-                    graphics.disableScissor();
-                }
+                label.renderIn(graphics, getX(), getY(), getWidth(), getHeight(), alpha);
             }
         };
     }
 
-    private static ScrollList page_head(Component page_id, Component title){
+    private static ScrollList page_head(Component page_id, Text title){
         var view = new ScrollList(0, 0, 0, 0, page_id).Spacing(4);
 
-        view.addChild(new Text(0, 0, 0, 18, title))
+        title.setHeight(18);
+        view.addChild(title)
                 .TextScale(1.5f).Align(Text.HorizontalAlignment.LEFT);
         view.addChild(new Separator().Horizontal());
 
@@ -168,7 +168,7 @@ public class GalleryScreen extends SeleneScreen {
 
     }
 
-    private static Card card(Component component) {
+    private static Card card(Text component) {
         return new Card(component) {
             @Override
             protected void layoutChildren() {

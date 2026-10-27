@@ -195,7 +195,7 @@ class ButtonTest {
 
     @Test
     void circularSizeTracksHeightAndRestoresTheLatestRequestedTextWidth() {
-        Button button = new Button(0, 0, 120, 32, Component.empty());
+        Button button = new Button(0, 0, 120, 32, Text.FromComponent(Component.empty()));
         assertEquals(32, button.getWidth());
         button.setWidth(160);
         assertEquals(32, button.getWidth());
@@ -226,6 +226,31 @@ class ButtonTest {
         assertEquals(40, button.getHeight());
         button.setMessage(Component.literal("caption"));
         assertEquals(160, button.getWidth());
+    }
+
+    @Test
+    void labelUpdatesAndReplacementKeepCircularSizingAndNarrationInSync() {
+        Text label = new Text("caption");
+        Button button = new Button(0, 0, 120, 32, label);
+        assertSame(label, button.getText());
+
+        label.setMessage(Component.empty());
+        assertEquals(32, button.getWidth());
+        label.setMessage(Component.literal("restored"));
+        assertEquals(120, button.getWidth());
+        assertSame(label.getMessage(), button.getMessage());
+
+        Text replacement = new Text("");
+        button.setText(replacement);
+        assertEquals(32, button.getWidth());
+        label.setMessage(Component.literal("old label"));
+        assertSame(replacement, button.getText());
+        assertTrue(button.getMessage().getString().isEmpty());
+        button.setMessage(Component.literal("new label"));
+        assertEquals("new label", replacement.getMessage().getString());
+        assertEquals(120, button.getWidth());
+        assertThrows(NullPointerException.class, () -> button.setText(null));
+        assertSame(replacement, button.getText());
     }
 
     @Test
@@ -413,7 +438,7 @@ class ButtonTest {
         }
 
         Probe(BaseWidget parent, int x, int y, int width, int height, Component message) {
-            super(parent, x, y, width, height, message);
+            super(parent, x, y, width, height, Text.FromComponent(message));
         }
 
         @Override public void playDownSound(SoundManager manager) {}

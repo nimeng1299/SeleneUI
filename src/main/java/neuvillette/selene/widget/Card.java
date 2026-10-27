@@ -1,15 +1,13 @@
 package neuvillette.selene.widget;
 
-import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nullable;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import neuvillette.selene.api.Color;
 import neuvillette.selene.api.Paint;
 import neuvillette.selene.api.Rect;
+import neuvillette.selene.state.Subscription;
 
 /**
  * 在 Block 左上边框中嵌入单行标题的卡片，沿用 Block 的背景、边框及圆角设置。
@@ -21,68 +19,82 @@ public class Card extends Block {
     private static final int TITLE_INSET = 12;
     private static final int TITLE_GAP = 4;
 
-    private Color titleColor = Color.fromRGB(220, 220, 220);
-    private float titleScale = 1f;
+    private static final Color DEFAULT_TITLE_COLOR = Color.fromRGB(220, 220, 220);
+    private Text title;
+    private Subscription titleChanges;
 
-    public Card(Component title) {
+    public Card(Text title) {
         this(0, 0, 0, 0, title);
     }
 
     public Card(String title) {
-        this(Component.literal(Objects.requireNonNull(title, "title")));
+        this(new Text(title));
     }
 
-    public Card(@Nullable BaseWidget parent, Component title) {
+    public Card(@Nullable BaseWidget parent, Text title) {
         this(parent, 0, 0, 0, 0, title);
     }
 
-    public Card(int x, int y, int width, int height, Component title) {
-        super(x, y, width, height, Objects.requireNonNull(title, "title"));
+    public Card(int x, int y, int width, int height, Text title) {
+        super(x, y, width, height, Objects.requireNonNull(title, "title").getMessage());
+        setText(title);
         setPadding(8);
     }
 
     public Card(int x, int y, int width, int height, String title) {
-        this(x, y, width, height, Component.literal(Objects.requireNonNull(title, "title")));
+        this(x, y, width, height, new Text(title));
     }
 
-    public Card(@Nullable BaseWidget parent, int x, int y, int width, int height, Component title) {
+    public Card(@Nullable BaseWidget parent, int x, int y, int width, int height, Text title) {
         this(x, y, width, height, title);
         setRelativePosition(parent, x, y);
     }
 
     @Override
     public void setMessage(Component title) {
-        super.setMessage(Objects.requireNonNull(title, "title"));
+        this.title.setMessage(title);
+    }
+
+    @Override
+    public Component getMessage() {
+        return title == null ? super.getMessage() : title.getMessage();
+    }
+
+    public Text getText() {
+        return title;
+    }
+
+    public void setText(Text title) {
+        Objects.requireNonNull(title, "title");
+        if (titleChanges != null) titleChanges.unsubscribe();
+        this.title = title;
+        titleChanges = title.onChange(this::invalidateLayout);
         invalidateLayout();
     }
 
-    public Card Title(Component title) {
-        setMessage(title);
+    public Card Title(Text title) {
+        setText(title);
         return this;
     }
 
     public Card Title(String title) {
-        return Title(Component.literal(Objects.requireNonNull(title, "title")));
+        setMessage(Component.literal(Objects.requireNonNull(title, "title")));
+        return this;
     }
 
     public Card TitleColor(Color color) {
-        titleColor = Objects.requireNonNull(color, "color");
+        title.TextColor(color);
         return this;
     }
 
     public Card TitleScale(float scale) {
-        if (!Float.isFinite(scale) || scale <= 0) {
-            throw new IllegalArgumentException("Title scale must be finite and positive");
-        }
-        titleScale = scale;
-        invalidateLayout();
+        title.TextScale(scale);
         return this;
     }
 
-    /** 预留的标题行高，单位为 GUI 像素；标题为空时为 0，不包含 padding。 */
+    /** 预留的标题行高，单位为 GUI 像素；标题为空时为 0，不包含卡片自身的 padding。 */
     public int getTitleHeight() {
-        return getMessage().getString().isEmpty() ? 0
-                : (int) Math.ceil(Minecraft.getInstance().font.lineHeight * (double) titleScale);
+        return getMessage().getString().isEmpty() ? 0 : title.singleLineHeight();
     }
 
     @Override
@@ -161,20 +173,12 @@ public class Card extends Block {
         int availableWidth = (int) Math.max(0L, (long) width - edge - TITLE_GAP - titleLeft);
         Color fill = withOpacity(fillColor, opacity);
         Color border = withOpacity(borderColor, opacity);
-        Color foreground = withOpacity(titleColor, opacity);
-        FormattedCharSequence title = null;
+        Text.SingleLine line = title.singleLine(availableWidth, titleHeight, false, true);
         int textWidth = 0;
-        if (titleHeight > 0 && availableWidth > 0) {
-            int maxWidth = (int) Math.floor(availableWidth / (double) titleScale);
-            if (maxWidth > 0) {
-                var font = Minecraft.getInstance().font;
-                List<FormattedCharSequence> lines = font.split(getMessage(), maxWidth);
-                if (!lines.isEmpty()) {
-                    title = lines.getFirst();
-                    textWidth = (int) Math.min(availableWidth, Math.ceil(font.width(title) * (double) titleScale));
-                }
-            }
-        }
+        int titleX = boundedCoordinate((long) x + titleLeft);
+        int textX = line == null ? titleX
+                : boundedCoordinate((long) Math.floor(title.lineX(line, titleX, availableWidth, Text.HorizontalAlignment.LEFT)));
+        if (line != null) textWidth = (int) Math.min(availableWidth, Math.ceil(line.width()));
 
         // Paint 立即提交绘制；先完成此前的 GUI 批次，整张卡片的绘制保持在自己的外框内。
         graphics.flush();
@@ -183,8 +187,8 @@ public class Card extends Block {
             int gapBottomOffset = Math.min(frameOffset + (int) Math.ceil(frameBorder) + 1,
                     height - (int) Math.ceil(frameBorder));
             if (textWidth > 0 && frameBorder > 0 && gapBottomOffset > frameOffset) {
-                int gapLeft = boundedCoordinate((long) x + titleLeft - TITLE_GAP);
-                int gapRight = boundedCoordinate((long) x + titleLeft + textWidth + TITLE_GAP);
+                int gapLeft = boundedCoordinate((long) textX - TITLE_GAP);
+                int gapRight = boundedCoordinate((long) textX + textWidth + TITLE_GAP);
                 int gapBottom = boundedCoordinate((long) y + gapBottomOffset);
                 // 四块区域互不重叠；标题缺口仅去掉顶边，不覆盖底边，也不叠加半透明颜色。
                 renderFramePart(graphics, frame, fill, border, frameBorder, x, y, gapLeft, bottom);
@@ -195,20 +199,13 @@ public class Card extends Block {
                 renderCardFrame(graphics, frame, fill, border, frameBorder);
             }
 
-            if (title != null && textWidth > 0 && foreground.Alpha() >= 4) {
-                int titleX = boundedCoordinate((long) x + titleLeft);
+            if (line != null && textWidth > 0) {
                 graphics.enableScissor(titleX, y,
                         boundedCoordinate((long) titleX + availableWidth),
                         boundedCoordinate(Math.min((long) bottom, (long) y + titleHeight)));
                 try {
-                    graphics.pose().pushPose();
-                    try {
-                        graphics.pose().translate(titleX, y, 0);
-                        graphics.pose().scale(titleScale, titleScale, 1f);
-                        graphics.drawString(Minecraft.getInstance().font, title, 0, 0, foreground.toARGB(), false);
-                    } finally {
-                        graphics.pose().popPose();
-                    }
+                    title.renderLine(graphics, line, titleX, y, availableWidth, titleHeight, opacity,
+                            DEFAULT_TITLE_COLOR, Text.HorizontalAlignment.LEFT, Text.VerticalAlignment.TOP, false);
                 } finally {
                     graphics.disableScissor();
                 }

@@ -59,7 +59,7 @@ class InfoCardTest {
     @Test
     void footerReservesSpaceAcrossParentPaddingAndResizing() {
         Block parent = new Block(10, 20, 300, 250, Component.empty()).Padding(2, 3, 4, 5);
-        InfoCard card = new InfoCard(parent, 7, 11, 120, 150, Component.literal("Lv.90"))
+        InfoCard card = new InfoCard(parent, 7, 11, 120, 150, Text.FromComponent(Component.literal("Lv.90")))
                 .Padding(3, 4, 5, 6);
         BaseWidget child = card.addChild(new Block(null, Component.empty()));
         child.setRelativePosition(2, 4);
@@ -87,7 +87,7 @@ class InfoCardTest {
         assertEquals(40, child.getX());
         assertEquals(50, child.getY());
 
-        InfoCard empty = new InfoCard(parent, Component.empty());
+        InfoCard empty = new InfoCard(parent, Text.FromComponent(Component.empty()));
         assertTrue(parent.children().contains(empty));
         assertEquals(0, empty.getWidth());
         assertEquals(0, empty.getContentHeight());
@@ -177,7 +177,7 @@ class InfoCardTest {
 
     @Test
     void invalidStylesAreRejected() {
-        InfoCard card = new InfoCard(Component.empty());
+        InfoCard card = new InfoCard(Text.FromComponent(Component.empty()));
         for (float value : new float[] {0, -1, Float.NaN, Float.POSITIVE_INFINITY}) {
             assertThrows(IllegalArgumentException.class, () -> card.ImageScale(value));
             assertThrows(IllegalArgumentException.class, () -> card.TextScale(value));
@@ -217,7 +217,7 @@ class InfoCardTest {
         int frames;
 
         Probe(int x, int y, int width, int height, String label) {
-            super(x, y, width, height, Component.literal(label));
+            super(x, y, width, height, new Text(label));
         }
 
         @Override protected void renderCard(GuiGraphics graphics, Rect rect, float radius, int footer,
